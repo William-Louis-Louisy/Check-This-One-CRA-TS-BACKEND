@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "npm i && ts-node-dev src/app.ts",
+    "start": "npm install --dev && ts-node-dev src/app.ts",
     "start:local": "ts-node-dev src/app.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
