@@ -19,6 +19,6 @@ userRouter.put("/update/:id", UserController.updateUser);
 userRouter.get("/user/:id", UserController.getUser);
 
 // GET USER AVATAR BY ID
-userRouter.get("/avatar/:id", UserController.getUserAvatar);
+// userRouter.get("/avatar/:id", UserController.getUserAvatar);
 
 export default userRouter;

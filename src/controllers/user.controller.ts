@@ -4,6 +4,7 @@ import { dataSource } from "../app";
 import { NextFunction, Request, Response } from "express";
 import { createUserService } from "../services/user.services";
 import { User } from "../models/user.model";
+import { List } from "../models/list.model";
 
 // CREATE TOKEN
 const maxAge = 3 * 24 * 60 * 60; // 3 days
@@ -48,12 +49,14 @@ const UserController = {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      const { avatar, country, city, catchline, introduction } = req.body;
+      const { avatar, country, city, catchline, introduction, username } =
+        req.body;
       user.avatar = avatar;
       user.country = country;
       user.city = city;
       user.catchline = catchline;
       user.introduction = introduction;
+      user.user_name = username;
       await dataSource.getRepository(User).save(user);
       return res.status(200).json({ message: "User updated" });
     } catch (error) {
@@ -64,33 +67,40 @@ const UserController = {
   // GET USER BY ID
   getUser: async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // GET USER ID FROM PARAMS
       const id = parseInt(req.params.id);
+      // FIND USER IN DATABASE
       const user = await dataSource
         .getRepository(User)
         .findOne({ where: { id: id } });
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      return res.status(200).json({ user });
-    } catch (error) {
-      return res.status(400).json({ message: error.message });
-    }
-  },
+      // FIND ALL LISTS THAT CONTAIN USER ID
+      const userLists = await dataSource.getRepository(List).find({
+        where: { creator_id: id },
+      });
+      // FIND ALL LISTS THAT CONTAIN USER ID and IS PUBLIC
+      const publicUserLists = await dataSource.getRepository(List).find({
+        where: { creator_id: id, privacy: "public" },
+      });
 
-  // GET USER AVATAR BY ID
-  getUserAvatar: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const id = parseInt(req.params.id);
-      const user = await dataSource
-        .getRepository(User)
-        .findOne({ where: { id: id } });
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      // Convert the avatar buffer to a base64 string
-      const avatarBase64 = user.avatar.toString("base64");
-      // Return the avatar as a base64 string
-      return res.status(200).json({ avatar: avatarBase64 });
+
+      // RETURN USER WITHOUT PASSWORD AND ID
+      return res.status(200).json({
+        user: {
+          id: user.id,
+          user_name: user.user_name,
+          avatar: user.avatar,
+          country: user.country,
+          city: user.city,
+          catchline: user.catchline,
+          introduction: user.introduction,
+          email: user.email,
+          listsCount: userLists.length,
+          publicListsCount: publicUserLists.length,
+        },
+      });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
