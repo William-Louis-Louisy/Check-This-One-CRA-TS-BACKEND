@@ -4,6 +4,8 @@ import { List } from "../models/list.model";
 import { addContentToListService } from "../services/list.services";
 import { Content } from "../models/content.model";
 import { Tag } from "../models/tag.model";
+import { FindManyOptions } from "typeorm";
+import { User } from "../models/user.model";
 
 const listController = {
   // CREATE A LIST
@@ -68,14 +70,38 @@ const listController = {
     }
   },
 
+  // GET ALL LIST WHERE PRIVACY IS PUBLIC WITH SEARCH BY TITLE
+  getAllPublicLists: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const lists = await dataSource
+        .getRepository(List)
+        .find({ where: { privacy: "public" } });
+      return res.status(200).json({ lists });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
   // GET LISTS BY USER ID
   getListsByUserId: async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // Get user id from url
       const id = parseInt(req.params.id);
-      const lists = await dataSource
+
+      const lists: FindManyOptions<List> = {
+        where: { creator_id: id },
+        take: 10,
+        skip: 0,
+      };
+
+      const [results, total] = await dataSource
         .getRepository(List)
-        .find({ where: { creator_id: id } });
-      return res.status(200).json({ lists });
+        .findAndCount(lists);
+      return res.status(200).json({ results, total });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -182,6 +208,144 @@ const listController = {
       list.content = list.content.filter((c) => c.id !== content.id);
       await listRepository.save(list);
       return res.status(200).json({ message: "Content deleted from list" });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // GET ALL LISTS THAT CONTAIN A PROVIDER ID
+  getAllListsByProviderId: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const providerId = parseInt(req.params.id);
+      const lists = await dataSource.getRepository(List).find({
+        where: { content: { provider_id: providerId } },
+      });
+      return res.status(200).json({ lists });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // GET ALL LISTS COUNT THAT CONTAIN A PROVIDER ID
+  getAllListsCountByProviderId: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const providerId = parseInt(req.params.id);
+      const lists = await dataSource.getRepository(List).find({
+        where: { content: { provider_id: providerId } },
+      });
+      return res.status(200).json({ count: lists.length });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // GET ALL LISTS FILTERED BY TITLE OR CREATOR ID
+  getAllListsFiltered: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const title = req.query.title;
+      const creator_id = req.query.creator_id;
+      const listRepository = dataSource.getRepository(List);
+      const lists = await listRepository.find({
+        where: { privacy: "public" },
+      });
+
+      if (title && creator_id) {
+        const filteredLists = lists.filter(
+          (list) =>
+            list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
+            list.creator_id === parseInt(creator_id.toString())
+        );
+        return res.status(200).json({ lists: filteredLists });
+      }
+
+      if (title) {
+        const filteredLists = lists.filter((list) =>
+          list.title.toLowerCase().includes(title.toString().toLowerCase())
+        );
+
+        return res.status(200).json({ lists: filteredLists });
+      }
+
+      if (creator_id) {
+        const filteredLists = lists.filter(
+          (list) => list.creator_id === parseInt(creator_id.toString())
+        );
+        return res.status(200).json({ lists: filteredLists });
+      }
+
+      return res.status(200).json({ lists });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // UPDATE LIST BY ID
+  updateListById: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const listId = parseInt(req.params.id);
+      const listRepository = dataSource.getRepository(List);
+      const list = await listRepository.findOne({ where: { id: listId } });
+      const { title, description, privacy } = req.body;
+      if (!title || !description || !privacy) {
+        return res.status(400).json({ message: "Please fill all fields" });
+      }
+      list.title = title;
+      list.description = description;
+      list.privacy = privacy;
+
+      await listRepository.save(list);
+      return res.status(200).json({ message: "List updated" });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // ADD A LIKE TO A LIST
+  addLikeToList: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const listId = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+
+      const userRepository = dataSource.getRepository(User);
+      const listRepository = dataSource.getRepository(List);
+
+      const [user, list] = await Promise.all([
+        userRepository.findOne({ where: { id: userId } }),
+        listRepository.findOne({ where: { id: listId } }),
+      ]);
+
+      if (user.liked_lists.includes(list)) {
+        list.likes -= 1;
+        user.liked_lists = user.liked_lists.filter((l) => l.id !== list.id);
+        list.liked_by = list.liked_by.filter((u) => u.id !== user.id);
+
+        await Promise.all([
+          listRepository.save(list),
+          userRepository.save(user),
+        ]);
+
+        return res.status(200).json({ message: "Like removed" });
+      }
+
+      list.likes += 1;
+      user.liked_lists.push(list);
+      list.liked_by.push(user);
+
+      await Promise.all([listRepository.save(list), userRepository.save(user)]);
+
+      return res.status(200).json({ message: "Like added" });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }

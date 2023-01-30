@@ -5,6 +5,9 @@ import {
   BeforeInsert,
   BeforeUpdate,
   OneToMany,
+  ManyToMany,
+  JoinTable,
+  Index,
 } from "typeorm";
 import bcrypt from "bcrypt";
 import { List } from "./list.model";
@@ -43,6 +46,10 @@ export class User {
 
   @OneToMany((type) => List, (list) => list.creator_id)
   lists: List[];
+
+  @ManyToMany(() => List, (list) => list.liked_by)
+  @JoinTable()
+  liked_lists: List[];
 
   @BeforeInsert()
   async hashPassword() {

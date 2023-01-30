@@ -9,6 +9,9 @@ listRouter.post("/list/create/:id", ListController.createList);
 // GET ALL LISTS
 listRouter.get("/lists/getAll", ListController.getAllLists);
 
+// GET ALL PUBLIC LISTS
+listRouter.get("/lists/getAllPublic", ListController.getAllPublicLists);
+
 // GET LISTS BY USER ID
 listRouter.get("/lists/getByUserId/:id", ListController.getListsByUserId);
 
@@ -32,5 +35,26 @@ listRouter.delete(
   "/:id/content/:contentId",
   ListController.deleteContentFromListById
 );
+
+// GET ALL LISTS THAT CONTAIN A PROVIDER ID
+listRouter.get(
+  "/lists/getByProviderId/:id",
+  ListController.getAllListsByProviderId
+);
+
+// GET ALL LISTS COUNT THAT CONTAIN A PROVIDER ID
+listRouter.get(
+  "/lists/getCountByProviderId/:id",
+  ListController.getAllListsCountByProviderId
+);
+
+// GET ALL LISTS FILTERED BY TITLE OR CREATOR ID
+listRouter.get(
+  "/lists/getAllListsFiltered",
+  ListController.getAllListsFiltered
+);
+
+// UPDATE LIST BY ID
+listRouter.put("/list/update/:id", ListController.updateListById);
 
 export default listRouter;

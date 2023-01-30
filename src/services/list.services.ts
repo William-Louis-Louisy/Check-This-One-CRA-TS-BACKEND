@@ -12,14 +12,33 @@ export const addContentToListService = async (listId: number, data: any) => {
 
   // Create new content from data
   const newContent = new Content();
-  newContent.provider_id = data.provider_id;
-  newContent.title = data.title;
-  newContent.poster_path = data.poster_path;
-  newContent.type = data.type;
-  newContent.seen = data.seen;
 
-  // Save content to database
-  await contentRepository.save(newContent);
+  // VERIFY IF CONTENT DOESN'T EXIST
+  const existingContent = await contentRepository.findOne({
+    where: { provider_id: data.provider_id },
+  });
+  if (existingContent) {
+    newContent.id = existingContent.id;
+    newContent.provider_id = existingContent.provider_id;
+    newContent.title = existingContent.title;
+    newContent.poster_path = existingContent.poster_path;
+    newContent.type = existingContent.type;
+  } else {
+    if (data.type === "youtube") {
+      newContent.provider_id_string = data.provider_id;
+      newContent.title = data.title;
+      newContent.poster_path = data.poster_path;
+      newContent.type = data.type;
+    } else {
+      newContent.provider_id = data.provider_id;
+      newContent.title = data.title;
+      newContent.poster_path = data.poster_path;
+      newContent.type = data.type;
+    }
+
+    // Save content to database
+    await contentRepository.save(newContent);
+  }
 
   // Get list from database
   const list = await listRepository.findOne({ where: { id: listId } });

@@ -8,6 +8,7 @@ import {
   OneToOne,
   JoinTable,
   JoinColumn,
+  Index,
 } from "typeorm";
 import { Content } from "./content.model";
 import { Tag } from "./tag.model";
@@ -51,6 +52,10 @@ export class List {
   // LIST LIKES
   @Column({ nullable: false, name: "likes" })
   likes: number;
+
+  @ManyToMany(() => User, (user) => user.liked_lists)
+  @JoinTable()
+  liked_by: User[];
 
   // LIST PRIVACY
   @Column({ nullable: false, name: "privacy" })
