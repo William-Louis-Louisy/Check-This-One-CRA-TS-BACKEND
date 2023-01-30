@@ -12,8 +12,11 @@ export class Content {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: false, name: "provider_id" })
+  @Column({ nullable: true, name: "provider_id" })
   provider_id: number;
+
+  @Column({ nullable: true, name: "provider_id_string" })
+  provider_id_string: string;
 
   @Column({ nullable: false, name: "title" })
   title: string;
@@ -23,9 +26,6 @@ export class Content {
 
   @Column({ nullable: false, name: "type" })
   type: string;
-
-  @Column({ nullable: false, name: "seen" })
-  seen: boolean;
 
   @ManyToMany((type) => List)
   @JoinTable()
