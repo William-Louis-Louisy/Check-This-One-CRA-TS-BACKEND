@@ -23,6 +23,10 @@ export const dataSource = new DataSource({
   synchronize: true,
 });
 
+app.set("x-powered-by", false);
+app.set("trust proxy", true);
+app.enable("trust proxy");
+
 // MIDDLEWARE
 app.use(
   cors({
