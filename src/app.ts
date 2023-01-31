@@ -24,7 +24,18 @@ export const dataSource = new DataSource({
 });
 
 // MIDDLEWARE
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "localhost:3000",
+      "212.227.70.139",
+      "https://checkthisone.vercel.app",
+      "checkthisone.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
