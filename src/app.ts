@@ -27,6 +27,7 @@ export const dataSource = new DataSource({
 app.use(
   cors({
     origin: [
+      "*",
       "localhost:3000",
       "212.227.70.139",
       "https://checkthisone.vercel.app",
