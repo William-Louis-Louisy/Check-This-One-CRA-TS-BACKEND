@@ -108,33 +108,37 @@ const UserController = {
 
   // LOGIN USER
   loginUser: async (req: Request, res: Response, next: NextFunction) => {
-    // Get the username and password from the request body
-    const { email, password } = req.body;
-    // Find the user matching the username
-    const user = await dataSource
-      .getRepository(User)
-      .findOne({ where: { email: email } });
-    // If the user is not found, return an error
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    try {
+      // Get the username and password from the request body
+      const { email, password } = req.body;
+      // Find the user matching the username
+      const user = await dataSource
+        .getRepository(User)
+        .findOne({ where: { email: email } });
+      // If the user is not found, return an error
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      // If the user is found, compare the password using bcrypt
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      // If the password doesn't match, return an error
+      if (!passwordMatch) {
+        return res.status(401).json({ message: "Password is incorrect" });
+      }
+      // If the password matches, generate a JWT
+      const token = createToken(user.id, user.user_name);
+      // Send the JWT back to the client
+      res.cookie("jwt", token, { httpOnly: true });
+      res.cookie("user", user, { httpOnly: true });
+      return res.status(200).json({ user, token });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
     }
-    // If the user is found, compare the password using bcrypt
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    // If the password doesn't match, return an error
-    if (!passwordMatch) {
-      return res.status(401).json({ message: "Password is incorrect" });
-    }
-    // If the password matches, generate a JWT
-    const token = createToken(user.id, user.user_name);
-    // Send the JWT back to the client
-    res.cookie("jwt", token, { httpOnly: true });
-    res.cookie("user", user, { httpOnly: true });
-    return res.status(200).json({ user, token });
   },
 
   // LOGOUT USER
   logoutUser: async (req: Request, res: Response, next: NextFunction) => {
-    res
+    return res
       .clearCookie("access_token", { domain: ".localhost" })
       .status(200)
       .json({ status: 200, message: "Logout successful" });
