@@ -33,6 +33,7 @@ app.use(
     origin: [
       "*",
       "localhost:3000",
+      "http://localhost:3000",
       "212.227.70.139",
       "https://checkthisone.vercel.app",
       "checkthisone.vercel.app",

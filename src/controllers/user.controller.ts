@@ -111,7 +111,7 @@ const UserController = {
     try {
       // Get the username and password from the request body
       const { email, password } = req.body;
-      // Find the user matching the username
+      // Find the user matching the user mail
       const user = await dataSource
         .getRepository(User)
         .findOne({ where: { email: email } });
