@@ -315,7 +315,7 @@ const listController = {
   // ADD A LIKE TO A LIST
   addLikeToList: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const listId = parseInt(req.params.id);
+      const listId = parseInt(req.params.listId);
       const userId = parseInt(req.params.userId);
 
       const userRepository = dataSource.getRepository(User);
