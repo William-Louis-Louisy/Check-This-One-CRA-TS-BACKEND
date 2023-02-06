@@ -318,6 +318,9 @@ const listController = {
       const listId = parseInt(req.params.listId);
       const userId = parseInt(req.params.userId);
 
+      const newLikedList: List[] = [];
+      const newLikedBy: User[] = [];
+
       const userRepository = dataSource.getRepository(User);
       const listRepository = dataSource.getRepository(List);
 
@@ -340,8 +343,11 @@ const listController = {
       }
 
       list.likes += 1;
-      user.liked_lists.push(list);
-      list.liked_by.push(user);
+      newLikedList.push(list);
+      newLikedBy.push(user);
+
+      user.liked_lists = newLikedList;
+      list.liked_by = newLikedBy;
 
       await Promise.all([listRepository.save(list), userRepository.save(user)]);
 
