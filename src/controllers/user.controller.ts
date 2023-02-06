@@ -5,6 +5,12 @@ import { NextFunction, Request, Response } from "express";
 import { createUserService } from "../services/user.services";
 import { User } from "../models/user.model";
 import { List } from "../models/list.model";
+import { UploadClient } from "@uploadcare/upload-client";
+
+// DEFINE UPLOADCARE PUBLIC KEY
+const client = new UploadClient({
+  publicKey: process.env.UPLOADCARE_PUBLIC_KEY,
+});
 
 // CREATE TOKEN
 const maxAge = 3 * 24 * 60 * 60; // 3 days
@@ -49,8 +55,16 @@ const UserController = {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      const { avatar, country, city, catchline, introduction, username } =
+      let { avatar, country, city, catchline, introduction, username } =
         req.body;
+
+      if (avatar) {
+        const buffer = Buffer.from(avatar, "base64");
+        client.uploadFile(buffer).then((file) => {
+          avatar = file.uuid;
+        });
+      }
+
       user.avatar = avatar;
       user.country = country;
       user.city = city;
