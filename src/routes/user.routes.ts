@@ -18,7 +18,4 @@ userRouter.put("/update/:id", UserController.updateUser);
 // GET A USER BY ID
 userRouter.get("/user/:id", UserController.getUser);
 
-// GET USER AVATAR BY ID
-// userRouter.get("/avatar/:id", UserController.getUserAvatar);
-
 export default userRouter;
