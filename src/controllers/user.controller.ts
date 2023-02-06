@@ -144,6 +144,25 @@ const UserController = {
       .status(200)
       .json({ status: 200, message: "Logout successful" });
   },
+
+  // GET LISTS LIKED BY A USER
+  getListsLikedByUser: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const userRepository = dataSource.getRepository(User);
+      const user = await userRepository.findOne({
+        where: { id: userId },
+        relations: ["liked_lists"],
+      });
+      return res.status(200).json({ lists: user.liked_lists });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
 };
 
 export default UserController;

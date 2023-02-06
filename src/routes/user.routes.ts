@@ -18,4 +18,7 @@ userRouter.put("/update/:id", UserController.updateUser);
 // GET A USER BY ID
 userRouter.get("/user/:id", UserController.getUser);
 
+// GET LISTS LIKED BY A USER
+userRouter.get("/user/:id/lists", UserController.getListsLikedByUser);
+
 export default userRouter;

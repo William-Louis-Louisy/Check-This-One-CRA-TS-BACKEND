@@ -356,5 +356,24 @@ const listController = {
       return res.status(400).json({ message: error.message });
     }
   },
+
+  // GET USERS THAT LIKED A LIST
+  getUsersThatLikedList: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const listId = parseInt(req.params.id);
+      const listRepository = dataSource.getRepository(List);
+      const list = await listRepository.findOne({
+        where: { id: listId },
+        relations: ["liked_by"],
+      });
+      return res.status(200).json({ users: list.liked_by });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
 };
 export default listController;
