@@ -8,9 +8,9 @@ import { List } from "../models/list.model";
 import { UploadClient } from "@uploadcare/upload-client";
 
 // DEFINE UPLOADCARE PUBLIC KEY
-const client = new UploadClient({
-  publicKey: process.env.UPLOADCARE_PUBLIC_KEY,
-});
+// const client = new UploadClient({
+//   publicKey: process.env.UPLOADCARE_PUBLIC_KEY,
+// });
 
 // CREATE TOKEN
 const maxAge = 3 * 24 * 60 * 60; // 3 days
@@ -58,12 +58,12 @@ const UserController = {
       let { avatar, country, city, catchline, introduction, username } =
         req.body;
 
-      if (avatar) {
-        const buffer = Buffer.from(avatar, "base64");
-        client.uploadFile(buffer).then((file) => {
-          avatar = file.uuid;
-        });
-      }
+      // if (avatar) {
+      //   const buffer = Buffer.from(avatar, "base64");
+      //   client.uploadFile(buffer).then((file) => {
+      //     avatar = file.uuid;
+      //   });
+      // }
 
       user.avatar = avatar;
       user.country = country;
