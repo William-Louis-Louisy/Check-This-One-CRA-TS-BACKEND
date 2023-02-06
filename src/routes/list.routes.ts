@@ -57,4 +57,6 @@ listRouter.get(
 // UPDATE LIST BY ID
 listRouter.put("/list/update/:id", ListController.updateListById);
 
+// ADD LIKE TO A LIST BY ID AND USER ID
+listRouter.put("/list/:listId/like/:userId", ListController.addLikeToList);
 export default listRouter;
