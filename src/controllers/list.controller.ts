@@ -326,7 +326,7 @@ const listController = {
         listRepository.findOne({ where: { id: listId } }),
       ]);
 
-      if (user.liked_lists.includes(list)) {
+      if (user?.liked_lists?.filter((l) => l.id === list.id).length > 0) {
         list.likes -= 1;
         user.liked_lists = user.liked_lists.filter((l) => l.id !== list.id);
         list.liked_by = list.liked_by.filter((u) => u.id !== user.id);
