@@ -54,7 +54,6 @@ export class List {
   likes: number;
 
   @ManyToMany(() => User, (user) => user.liked_lists)
-  @JoinTable()
   liked_by: User[];
 
   // LIST PRIVACY

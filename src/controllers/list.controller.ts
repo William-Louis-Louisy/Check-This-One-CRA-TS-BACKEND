@@ -1,11 +1,11 @@
 import { dataSource } from "../app";
-import { NextFunction, Request, Response } from "express";
-import { List } from "../models/list.model";
-import { addContentToListService } from "../services/list.services";
-import { Content } from "../models/content.model";
 import { Tag } from "../models/tag.model";
 import { FindManyOptions } from "typeorm";
 import { User } from "../models/user.model";
+import { List } from "../models/list.model";
+import { Content } from "../models/content.model";
+import { NextFunction, Request, Response } from "express";
+import { addContentToListService } from "../services/list.services";
 
 const listController = {
   // CREATE A LIST
@@ -63,7 +63,10 @@ const listController = {
   // GET ALL LISTS
   getAllLists: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const lists = await dataSource.getRepository(List).find();
+      const lists = await dataSource.getRepository(List).find({
+        relations: ["liked_by"],
+        select: { liked_by: { id: true, user_name: true, avatar: true } },
+      });
       return res.status(200).json({ lists });
     } catch (error) {
       return res.status(400).json({ message: error.message });
@@ -77,9 +80,11 @@ const listController = {
     next: NextFunction
   ) => {
     try {
-      const lists = await dataSource
-        .getRepository(List)
-        .find({ where: { privacy: "public" } });
+      const lists = await dataSource.getRepository(List).find({
+        where: { privacy: "public" },
+        relations: ["liked_by"],
+        select: { liked_by: { id: true, user_name: true, avatar: true } },
+      });
       return res.status(200).json({ lists });
     } catch (error) {
       return res.status(400).json({ message: error.message });
@@ -94,6 +99,8 @@ const listController = {
 
       const lists: FindManyOptions<List> = {
         where: { creator_id: id },
+        relations: ["liked_by"],
+        select: { liked_by: { id: true, user_name: true, avatar: true } },
         take: 10,
         skip: 0,
       };
@@ -111,9 +118,11 @@ const listController = {
   getListById: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
-      const list = await dataSource
-        .getRepository(List)
-        .findOne({ where: { id: id } });
+      const list = await dataSource.getRepository(List).findOne({
+        where: { id: id },
+        relations: ["liked_by"],
+        select: { liked_by: { id: true, user_name: true, avatar: true } },
+      });
       return res.status(200).json({ list });
     } catch (error) {
       return res.status(400).json({ message: error.message });
@@ -223,6 +232,8 @@ const listController = {
       const providerId = parseInt(req.params.id);
       const lists = await dataSource.getRepository(List).find({
         where: { content: { provider_id: providerId } },
+        relations: ["liked_by"],
+        select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
       return res.status(200).json({ lists });
     } catch (error) {
@@ -259,6 +270,8 @@ const listController = {
       const listRepository = dataSource.getRepository(List);
       const lists = await listRepository.find({
         where: { privacy: "public" },
+        relations: ["liked_by"],
+        select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
 
       if (title && creator_id) {
@@ -318,40 +331,46 @@ const listController = {
       const listId = parseInt(req.params.listId);
       const userId = parseInt(req.params.userId);
 
-      const newLikedList: List[] = [];
-      const newLikedBy: User[] = [];
+      return await dataSource.transaction(
+        async (transactionalEntityManager) => {
+          const userRepository = transactionalEntityManager.getRepository(User);
+          const listRepository = transactionalEntityManager.getRepository(List);
 
-      const userRepository = dataSource.getRepository(User);
-      const listRepository = dataSource.getRepository(List);
+          const [user, list] = await Promise.all([
+            userRepository.findOne({
+              where: { id: userId },
+              relations: ["liked_lists"],
+            }),
+            listRepository.findOne({
+              where: { id: listId },
+              relations: ["liked_by"],
+            }),
+          ]);
 
-      const [user, list] = await Promise.all([
-        userRepository.findOne({ where: { id: userId } }),
-        listRepository.findOne({ where: { id: listId } }),
-      ]);
+          if (user?.liked_lists?.filter((l) => l.id === list.id).length > 0) {
+            list.likes -= 1;
+            user.liked_lists = user.liked_lists.filter((l) => l.id !== list.id);
 
-      if (user?.liked_lists?.filter((l) => l.id === list.id).length > 0) {
-        list.likes -= 1;
-        user.liked_lists = user.liked_lists.filter((l) => l.id !== list.id);
-        list.liked_by = list.liked_by.filter((u) => u.id !== user.id);
+            await Promise.all([
+              listRepository.save(list),
+              userRepository.save(user),
+            ]);
 
-        await Promise.all([
-          listRepository.save(list),
-          userRepository.save(user),
-        ]);
+            return res.status(200).json({ message: "Like removed" });
+          }
 
-        return res.status(200).json({ message: "Like removed" });
-      }
+          list.likes += 1;
 
-      list.likes += 1;
-      newLikedList.push(list);
-      newLikedBy.push(user);
+          user.liked_lists.push(list);
 
-      user.liked_lists = newLikedList;
-      list.liked_by = newLikedBy;
+          await Promise.all([
+            listRepository.save(list),
+            userRepository.save(user),
+          ]);
 
-      await Promise.all([listRepository.save(list), userRepository.save(user)]);
-
-      return res.status(200).json({ message: "Like added" });
+          return res.status(200).json({ message: "Like added" });
+        }
+      );
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -369,6 +388,7 @@ const listController = {
       const list = await listRepository.findOne({
         where: { id: listId },
         relations: ["liked_by"],
+        select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
       return res.status(200).json({ users: list.liked_by });
     } catch (error) {
