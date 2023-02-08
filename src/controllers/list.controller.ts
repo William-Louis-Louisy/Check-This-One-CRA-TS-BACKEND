@@ -360,7 +360,6 @@ const listController = {
           }
 
           list.likes += 1;
-
           user.liked_lists.push(list);
 
           await Promise.all([
@@ -391,6 +390,27 @@ const listController = {
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
       return res.status(200).json({ users: list.liked_by });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // GET THE 20 MOST LIKED LISTS
+  getMostLikedLists: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const listRepository = dataSource.getRepository(List);
+      const lists = await listRepository.find({
+        where: { privacy: "public" },
+        relations: ["liked_by"],
+        select: { liked_by: { id: true, user_name: true, avatar: true } },
+        order: { likes: "DESC" },
+        take: 20,
+      });
+      return res.status(200).json({ lists });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
