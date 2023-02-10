@@ -17,6 +17,14 @@ const listController = {
       // Get the tag repository
       const tagRepository = dataSource.getRepository(Tag);
 
+      // Get the user repository
+      const userRepository = dataSource.getRepository(User);
+
+      // Get the user
+      const user = await userRepository.findOne({
+        where: { id: parseInt(userId) },
+      });
+
       // Create an empty array for tags
       const tagsArray: Tag[] = [];
 
@@ -31,6 +39,7 @@ const listController = {
       list.privacy = "public";
       list.creation_date = new Date();
       list.creator_id = parseInt(userId);
+      list.creator = user;
       list.likes = 0;
 
       // For each tag in the request body, check if it exists in the database
@@ -314,9 +323,17 @@ const listController = {
       if (!title || !description || !privacy) {
         return res.status(400).json({ message: "Please fill all fields" });
       }
+
+      // Get user from creator_id
+      const userRepository = dataSource.getRepository(User);
+      const user = await userRepository.findOne({
+        where: { id: list.creator_id },
+      });
+
       list.title = title;
       list.description = description;
       list.privacy = privacy;
+      list.creator = user;
 
       await listRepository.save(list);
       return res.status(200).json({ message: "List updated" });
@@ -395,22 +412,30 @@ const listController = {
     }
   },
 
-  // GET THE 20 MOST LIKED LISTS
+  // GET USERS WITH MOST LIKES ON THEIR LISTS
   getMostLikedLists: async (
     req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
-      const listRepository = dataSource.getRepository(List);
-      const lists = await listRepository.find({
-        where: { privacy: "public" },
-        relations: ["liked_by"],
-        select: { liked_by: { id: true, user_name: true, avatar: true } },
-        order: { likes: "DESC" },
-        take: 20,
-      });
-      return res.status(200).json({ lists });
+      const query = await dataSource
+        .createQueryBuilder()
+        .select([
+          "user.avatar",
+          "user.id",
+          "user.user_name",
+          "SUM(lists.likes) as total_likes",
+        ])
+        .from(User, "user")
+        .leftJoin("user.lists", "lists")
+        .where("lists.privacy = 'public'")
+        .groupBy("user.id")
+        .orderBy("SUM(lists.likes)", "DESC")
+        .take(20)
+        .getRawMany();
+
+      return res.status(200).json(query);
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }

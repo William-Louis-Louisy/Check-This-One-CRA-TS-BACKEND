@@ -76,11 +76,11 @@ const UserController = {
         .findOne({ where: { id: id } });
       // FIND ALL LISTS THAT CONTAIN USER ID
       const userLists = await dataSource.getRepository(List).find({
-        where: { creator_id: id },
+        where: { creator_id: id, creator: { id } },
       });
       // FIND ALL LISTS THAT CONTAIN USER ID and IS PUBLIC
       const publicUserLists = await dataSource.getRepository(List).find({
-        where: { creator_id: id, privacy: "public" },
+        where: { creator_id: id, creator: { id }, privacy: "public" },
       });
 
       if (!user) {

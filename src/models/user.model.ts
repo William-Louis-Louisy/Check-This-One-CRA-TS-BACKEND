@@ -44,7 +44,7 @@ export class User {
   @Column({ nullable: true, name: "catchline" })
   catchline: string;
 
-  @OneToMany((type) => List, (list) => list.creator_id)
+  @OneToMany(() => List, (list) => list.creator)
   lists: List[];
 
   @ManyToMany(() => List, (list) => list.liked_by)

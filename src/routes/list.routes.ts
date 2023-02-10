@@ -63,7 +63,7 @@ listRouter.put("/list/:listId/like/:userId", ListController.addLikeToList);
 // GET USERS THAT LIKED A LIST
 listRouter.get("/list/:id/likes", ListController.getUsersThatLikedList);
 
-// GET THE 20 MOST LIKED LISTS
+// GET USERS WITH MOST LIKES ON THEIR LISTS
 listRouter.get("/lists/getMostLiked", ListController.getMostLikedLists);
 
 export default listRouter;
