@@ -276,12 +276,29 @@ const listController = {
     try {
       const title = req.query.title;
       const creator_id = req.query.creator_id;
+      const tags = req.body.tags;
       const listRepository = dataSource.getRepository(List);
       const lists = await listRepository.find({
         where: { privacy: "public" },
-        relations: ["liked_by"],
-        select: { liked_by: { id: true, user_name: true, avatar: true } },
+        relations: ["liked_by", "tags"],
+        select: {
+          liked_by: { id: true, user_name: true, avatar: true },
+          tags: { name: true },
+        },
       });
+
+      // Filter by title and creator_id and tags
+      if (title && creator_id && tags) {
+        const filteredLists = lists.filter((list) => {
+          const listTags = list.tags.map((tag) => tag.name);
+          return (
+            list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
+            list.creator_id === parseInt(creator_id.toString()) &&
+            tags.every((tag: string) => listTags.includes(tag))
+          );
+        });
+        return res.status(200).json({ lists: filteredLists });
+      }
 
       if (title && creator_id) {
         const filteredLists = lists.filter(
@@ -289,6 +306,28 @@ const listController = {
             list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
             list.creator_id === parseInt(creator_id.toString())
         );
+        return res.status(200).json({ lists: filteredLists });
+      }
+
+      if (title && tags) {
+        const filteredLists = lists.filter((list) => {
+          const listTags = list.tags.map((tag) => tag.name);
+          return (
+            list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
+            tags.every((tag: string) => listTags.includes(tag))
+          );
+        });
+        return res.status(200).json({ lists: filteredLists });
+      }
+
+      if (creator_id && tags) {
+        const filteredLists = lists.filter((list) => {
+          const listTags = list.tags.map((tag) => tag.name);
+          return (
+            list.creator_id === parseInt(creator_id.toString()) &&
+            tags.every((tag: string) => listTags.includes(tag))
+          );
+        });
         return res.status(200).json({ lists: filteredLists });
       }
 
@@ -304,6 +343,14 @@ const listController = {
         const filteredLists = lists.filter(
           (list) => list.creator_id === parseInt(creator_id.toString())
         );
+        return res.status(200).json({ lists: filteredLists });
+      }
+
+      if (tags) {
+        const filteredLists = lists.filter((list) => {
+          const listTags = list.tags.map((tag) => tag.name);
+          return tags.every((tag: string) => listTags.includes(tag));
+        });
         return res.status(200).json({ lists: filteredLists });
       }
 
