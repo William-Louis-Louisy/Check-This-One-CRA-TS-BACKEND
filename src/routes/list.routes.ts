@@ -49,7 +49,7 @@ listRouter.get(
 );
 
 // GET ALL LISTS FILTERED BY TITLE OR CREATOR ID
-listRouter.get(
+listRouter.post(
   "/lists/getAllListsFiltered",
   ListController.getAllListsFiltered
 );
