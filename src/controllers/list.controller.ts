@@ -73,7 +73,7 @@ const listController = {
   getAllLists: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const lists = await dataSource.getRepository(List).find({
-        relations: ["liked_by"],
+        relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
       return res.status(200).json({ lists });
@@ -91,7 +91,7 @@ const listController = {
     try {
       const lists = await dataSource.getRepository(List).find({
         where: { privacy: "public" },
-        relations: ["liked_by"],
+        relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
       return res.status(200).json({ lists });
@@ -108,7 +108,7 @@ const listController = {
 
       const lists: FindManyOptions<List> = {
         where: { creator_id: id },
-        relations: ["liked_by"],
+        relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
         take: 10,
         skip: 0,
@@ -129,7 +129,7 @@ const listController = {
       const id = parseInt(req.params.id);
       const list = await dataSource.getRepository(List).findOne({
         where: { id: id },
-        relations: ["liked_by"],
+        relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
       return res.status(200).json({ list });
@@ -241,7 +241,7 @@ const listController = {
       const providerId = parseInt(req.params.id);
       const lists = await dataSource.getRepository(List).find({
         where: { content: { provider_id: providerId } },
-        relations: ["liked_by"],
+        relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
       return res.status(200).json({ lists });
@@ -267,7 +267,7 @@ const listController = {
     }
   },
 
-  // GET ALL LISTS FILTERED BY TITLE OR CREATOR ID
+  // GET ALL LISTS FILTERED BY TITLE, CREATOR ID OR TAGS
   getAllListsFiltered: async (
     req: Request,
     res: Response,
@@ -283,7 +283,6 @@ const listController = {
         relations: ["liked_by", "tags"],
         select: {
           liked_by: { id: true, user_name: true, avatar: true },
-          tags: { name: true },
         },
       });
 
