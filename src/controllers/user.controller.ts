@@ -73,7 +73,7 @@ const UserController = {
       // FIND USER IN DATABASE
       const user = await dataSource
         .getRepository(User)
-        .findOne({ where: { id: id } });
+        .findOne({ where: { id: id }, relations: ["seen_content"] });
       // FIND ALL LISTS THAT CONTAIN USER ID
       const userLists = await dataSource.getRepository(List).find({
         where: { creator_id: id, creator: { id } },
@@ -100,6 +100,8 @@ const UserController = {
           email: user.email,
           listsCount: userLists.length,
           publicListsCount: publicUserLists.length,
+          seenContentCount: user.seen_content.length,
+          seenContent: user.seen_content,
         },
       });
     } catch (error) {
@@ -115,7 +117,7 @@ const UserController = {
       // Find the user matching the user mail
       const user = await dataSource
         .getRepository(User)
-        .findOne({ where: { email: email } });
+        .findOne({ where: { email: email }, relations: ["seen_content"] });
       // If the user is not found, return an error
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -131,7 +133,21 @@ const UserController = {
       // Send the JWT back to the client
       res.cookie("jwt", token, { httpOnly: true });
       res.cookie("user", user, { httpOnly: true });
-      return res.status(200).json({ user, token });
+      return res.status(200).json({
+        user: {
+          id: user.id,
+          user_name: user.user_name,
+          avatar: user.avatar,
+          country: user.country,
+          city: user.city,
+          catchline: user.catchline,
+          introduction: user.introduction,
+          email: user.email,
+          seenContentCount: user.seen_content.length,
+          seenContent: user.seen_content,
+        },
+        token,
+      });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -159,6 +175,19 @@ const UserController = {
         relations: ["liked_lists"],
       });
       return res.status(200).json({ lists: user.liked_lists });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // GET ALL USERS
+  getAllUsers: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userRepository = dataSource.getRepository(User);
+      const users = await userRepository.find({
+        relations: ["liked_lists", "lists"],
+      });
+      return res.status(200).json({ users });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }

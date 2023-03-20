@@ -21,4 +21,7 @@ userRouter.get("/user/:id", UserController.getUser);
 // GET LISTS LIKED BY A USER
 userRouter.get("/user/:id/lists", UserController.getListsLikedByUser);
 
+// GET ALL USERS
+userRouter.get("/users/getAll", UserController.getAllUsers);
+
 export default userRouter;

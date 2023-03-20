@@ -11,6 +11,7 @@ import {
 } from "typeorm";
 import bcrypt from "bcrypt";
 import { List } from "./list.model";
+import { Content } from "./content.model";
 
 @Entity()
 export class User {
@@ -50,6 +51,10 @@ export class User {
   @ManyToMany(() => List, (list) => list.liked_by)
   @JoinTable()
   liked_lists: List[];
+
+  @ManyToMany(() => Content, (content) => content.seen_by)
+  @JoinTable()
+  seen_content: Content[];
 
   @BeforeInsert()
   async hashPassword() {

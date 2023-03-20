@@ -41,7 +41,6 @@ const listController = {
       list.creator_id = parseInt(userId);
       list.creator = user;
       list.likes = 0;
-
       // For each tag in the request body, check if it exists in the database
       for (const tag of tags) {
         const existingTag = await tagRepository.findOne({
@@ -280,7 +279,7 @@ const listController = {
       const listRepository = dataSource.getRepository(List);
       const lists = await listRepository.find({
         where: { privacy: "public" },
-        relations: ["liked_by", "tags"],
+        relations: ["liked_by", "tags", "content", "content.seen_by"],
         select: {
           liked_by: { id: true, user_name: true, avatar: true },
         },
@@ -480,6 +479,21 @@ const listController = {
         .orderBy("SUM(lists.likes)", "DESC")
         .take(20)
         .getRawMany();
+
+      return res.status(200).json(query);
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // GET TOTAL LIKES
+  getTotalLikes: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const query = await dataSource
+        .createQueryBuilder()
+        .select(["SUM(lists.likes) as total_likes"])
+        .from(List, "lists")
+        .getRawOne();
 
       return res.status(200).json(query);
     } catch (error) {

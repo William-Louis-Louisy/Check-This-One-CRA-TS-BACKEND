@@ -66,4 +66,7 @@ listRouter.get("/list/:id/likes", ListController.getUsersThatLikedList);
 // GET USERS WITH MOST LIKES ON THEIR LISTS
 listRouter.get("/lists/getMostLiked", ListController.getMostLikedLists);
 
+// GET TOTAL LIKES
+listRouter.get("/lists/getTotalLikes", ListController.getTotalLikes);
+
 export default listRouter;

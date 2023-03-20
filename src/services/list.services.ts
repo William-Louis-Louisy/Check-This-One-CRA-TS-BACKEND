@@ -23,17 +23,20 @@ export const addContentToListService = async (listId: number, data: any) => {
     newContent.title = existingContent.title;
     newContent.poster_path = existingContent.poster_path;
     newContent.type = existingContent.type;
+    newContent.seen = existingContent.seen;
   } else {
     if (data.type === "youtube") {
       newContent.provider_id_string = data.provider_id;
       newContent.title = data.title;
       newContent.poster_path = data.poster_path;
       newContent.type = data.type;
+      newContent.seen = 0;
     } else {
       newContent.provider_id = data.provider_id;
       newContent.title = data.title;
       newContent.poster_path = data.poster_path;
       newContent.type = data.type;
+      newContent.seen = 0;
     }
 
     // Save content to database
