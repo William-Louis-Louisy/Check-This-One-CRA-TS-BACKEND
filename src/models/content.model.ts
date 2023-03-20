@@ -6,6 +6,7 @@ import {
   JoinTable,
 } from "typeorm";
 import { List } from "./list.model";
+import { User } from "./user.model";
 
 @Entity()
 export class Content {
@@ -26,6 +27,12 @@ export class Content {
 
   @Column({ nullable: false, name: "type" })
   type: string;
+
+  @Column({ nullable: false, name: "seen" })
+  seen: number;
+
+  @ManyToMany(() => User, (user) => user.seen_content)
+  seen_by: User[];
 
   @ManyToMany((type) => List)
   @JoinTable()
