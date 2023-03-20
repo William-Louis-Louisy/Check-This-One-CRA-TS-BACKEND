@@ -6,6 +6,17 @@ import { List } from "../models/list.model";
 import { Content } from "../models/content.model";
 import { NextFunction, Request, Response } from "express";
 import { addContentToListService } from "../services/list.services";
+const QRCode = require("qrcode");
+
+async function generateQRCodeDataURL(url: string) {
+  try {
+    const qrCodeDataURL = await QRCode.toDataURL(url);
+    return qrCodeDataURL;
+  } catch (err) {
+    console.error("Erreur lors de la génération du QR Code", err);
+    return null;
+  }
+}
 
 const listController = {
   // CREATE A LIST
@@ -285,9 +296,18 @@ const listController = {
         },
       });
 
+      // Generate qrcodes for each list
+      const listsWithQRCodes = await Promise.all(
+        lists.map(async (list) => {
+          const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
+          const qrCodeDataURL = await generateQRCodeDataURL(url);
+          return { ...list, qrCodeDataURL };
+        })
+      );
+
       // Filter by title and creator_id and tags
       if (title && creator_id && tags) {
-        const filteredLists = lists.filter((list) => {
+        const filteredLists = listsWithQRCodes.filter((list) => {
           const listTags = list.tags.map((tag) => tag.name);
           return (
             list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
@@ -299,7 +319,7 @@ const listController = {
       }
 
       if (title && creator_id) {
-        const filteredLists = lists.filter(
+        const filteredLists = listsWithQRCodes.filter(
           (list) =>
             list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
             list.creator_id === parseInt(creator_id.toString())
@@ -308,7 +328,7 @@ const listController = {
       }
 
       if (title && tags) {
-        const filteredLists = lists.filter((list) => {
+        const filteredLists = listsWithQRCodes.filter((list) => {
           const listTags = list.tags.map((tag) => tag.name);
           return (
             list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
@@ -319,7 +339,7 @@ const listController = {
       }
 
       if (creator_id && tags) {
-        const filteredLists = lists.filter((list) => {
+        const filteredLists = listsWithQRCodes.filter((list) => {
           const listTags = list.tags.map((tag) => tag.name);
           return (
             list.creator_id === parseInt(creator_id.toString()) &&
@@ -330,7 +350,7 @@ const listController = {
       }
 
       if (title) {
-        const filteredLists = lists.filter((list) =>
+        const filteredLists = listsWithQRCodes.filter((list) =>
           list.title.toLowerCase().includes(title.toString().toLowerCase())
         );
 
@@ -338,21 +358,21 @@ const listController = {
       }
 
       if (creator_id) {
-        const filteredLists = lists.filter(
+        const filteredLists = listsWithQRCodes.filter(
           (list) => list.creator_id === parseInt(creator_id.toString())
         );
         return res.status(200).json({ lists: filteredLists });
       }
 
       if (tags) {
-        const filteredLists = lists.filter((list) => {
+        const filteredLists = listsWithQRCodes.filter((list) => {
           const listTags = list.tags.map((tag) => tag.name);
           return tags.every((tag: string) => listTags.includes(tag));
         });
         return res.status(200).json({ lists: filteredLists });
       }
 
-      return res.status(200).json({ lists });
+      return res.status(200).json({ listsWithQRCodes });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
