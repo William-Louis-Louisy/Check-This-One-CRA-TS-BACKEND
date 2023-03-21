@@ -117,7 +117,7 @@ const UserController = {
       // Find the user matching the user mail
       const user = await dataSource
         .getRepository(User)
-        .findOne({ where: { email: email }, relations: ["seen_content"] });
+        .findOne({ where: { email: email } });
       // If the user is not found, return an error
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -143,8 +143,6 @@ const UserController = {
           catchline: user.catchline,
           introduction: user.introduction,
           email: user.email,
-          seenContentCount: user.seen_content.length,
-          seenContent: user.seen_content,
         },
         token,
       });
