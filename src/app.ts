@@ -31,12 +31,11 @@ app.enable("trust proxy");
 app.use(
   cors({
     origin: [
-      "*",
-      "localhost:3000",
       "http://localhost:3000",
-      "212.227.70.139",
+      "https://localhost:3000",
+      "http://212.227.70.139",
+      "https://212.227.70.139",
       "https://checkthisone.vercel.app",
-      "checkthisone.vercel.app",
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
@@ -60,3 +59,10 @@ dataSource
   .catch((error) => {
     console.error("🔴 Error connecting to MySQL database!", error);
   });
+
+// "*",
+//     "localhost:3000",
+//     "http://localhost:3000",
+//     "212.227.70.139",
+//     "https://checkthisone.vercel.app",
+//     "checkthisone.vercel.app",
