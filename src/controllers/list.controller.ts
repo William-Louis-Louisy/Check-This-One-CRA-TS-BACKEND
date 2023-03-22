@@ -116,18 +116,37 @@ const listController = {
       // Get user id from url
       const id = parseInt(req.params.id);
 
+      // Get pagination options from query parameters
+      const limit = parseInt(req.query.limit as string) || 10;
+      const page = parseInt(req.query.page as string) || 1;
+      const paginate = req.query.paginate !== "false";
+      const validLimits = [10, 20, 50, 100];
+
+      // Validate the limit value
+      if (!validLimits.includes(limit) && paginate) {
+        return res.status(400).json({
+          message:
+            "Invalid limit value. It should be one of these values: 10, 20, 50, 100.",
+        });
+      }
+
       const lists: FindManyOptions<List> = {
         where: { creator_id: id },
         relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
-        take: 10,
-        skip: 0,
+        take: paginate ? limit : undefined,
+        skip: paginate ? (page - 1) * limit : undefined,
       };
 
       const [results, total] = await dataSource
         .getRepository(List)
         .findAndCount(lists);
-      return res.status(200).json({ results, total });
+
+      const totalPages = paginate ? Math.ceil(total / limit) : 1;
+
+      return res
+        .status(200)
+        .json(paginate ? { results, total, page, totalPages } : { results });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
