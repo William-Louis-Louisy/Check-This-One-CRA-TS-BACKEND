@@ -24,4 +24,16 @@ userRouter.get("/user/:id/lists", UserController.getListsLikedByUser);
 // GET ALL USERS
 userRouter.get("/users/getAll", UserController.getAllUsers);
 
+// CHECK USERNAME AVAILABILITY
+userRouter.get(
+  "/users/check-username-availability",
+  UserController.checkUsernameAvailability
+);
+
+// CHECK EMAIL AVAILABILITY
+userRouter.get(
+  "/users/check-email-availability",
+  UserController.checkEmailAvailability
+);
+
 export default userRouter;

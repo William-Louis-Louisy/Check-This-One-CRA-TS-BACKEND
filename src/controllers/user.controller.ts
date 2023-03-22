@@ -190,6 +190,62 @@ const UserController = {
       return res.status(400).json({ message: error.message });
     }
   },
+
+  // CHECK USERNAME AVAILABILITY
+  checkUsernameAvailability: async (req: Request, res: Response) => {
+    try {
+      const { user_name } = req.query;
+
+      if (!user_name) {
+        return res.status(400).json({ message: "No username provided" });
+      }
+
+      const userRepository = dataSource.getRepository(User);
+      let existingUser;
+
+      if (user_name) {
+        existingUser = await userRepository.findOne({
+          where: { user_name: user_name as string },
+        });
+      }
+
+      if (existingUser) {
+        return res.status(200).json({ available: false });
+      } else {
+        return res.status(200).json({ available: true });
+      }
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+  },
+
+  // CHECK EMAIL AVAILABILITY
+  checkEmailAvailability: async (req: Request, res: Response) => {
+    try {
+      const { email } = req.query;
+
+      if (!email) {
+        return res.status(400).json({ message: "No email provided" });
+      }
+
+      const userRepository = dataSource.getRepository(User);
+      let existingUser;
+
+      if (email) {
+        existingUser = await userRepository.findOne({
+          where: { email: email as string },
+        });
+      }
+
+      if (existingUser) {
+        return res.status(200).json({ available: false });
+      } else {
+        return res.status(200).json({ available: true });
+      }
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+  },
 };
 
 export default UserController;
