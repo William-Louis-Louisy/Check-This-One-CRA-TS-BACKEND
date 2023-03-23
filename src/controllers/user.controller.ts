@@ -170,7 +170,11 @@ const UserController = {
       const userRepository = dataSource.getRepository(User);
       const user = await userRepository.findOne({
         where: { id: userId },
-        relations: ["liked_lists"],
+        relations: [
+          "liked_lists",
+          "liked_lists.content",
+          "liked_lists.content.seen_by",
+        ],
       });
       return res.status(200).json({ lists: user.liked_lists });
     } catch (error) {

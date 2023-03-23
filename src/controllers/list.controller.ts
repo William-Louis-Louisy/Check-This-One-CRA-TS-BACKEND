@@ -132,7 +132,7 @@ const listController = {
 
       const lists: FindManyOptions<List> = {
         where: { creator_id: id },
-        relations: ["liked_by", "tags"],
+        relations: ["liked_by", "tags", "content", "content.seen_by"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
         take: paginate ? limit : undefined,
         skip: paginate ? (page - 1) * limit : undefined,
@@ -306,6 +306,21 @@ const listController = {
       const title = req.query.title;
       const creator_id = req.query.creator_id;
       const tags = req.body.tags;
+
+      // Get pagination options from query parameters
+      const limit = parseInt(req.query.limit as string) || 10;
+      const page = parseInt(req.query.page as string) || 1;
+      const paginate = req.query.paginate !== "false";
+      const validLimits = [10, 20, 50, 100];
+
+      // Validate the limit value
+      if (!validLimits.includes(limit) && paginate) {
+        return res.status(400).json({
+          message:
+            "Invalid limit value. It should be one of these values: 10, 20, 50, 100.",
+        });
+      }
+
       const listRepository = dataSource.getRepository(List);
       const lists = await listRepository.find({
         where: { privacy: "public" },
@@ -313,7 +328,15 @@ const listController = {
         select: {
           liked_by: { id: true, user_name: true, avatar: true },
         },
+        take: paginate ? limit : undefined,
+        skip: paginate ? (page - 1) * limit : undefined,
       });
+
+      const total = await listRepository.count({
+        where: { privacy: "public" },
+      });
+
+      const totalPages = paginate ? Math.ceil(total / limit) : 1;
 
       // Generate qrcodes for each list
       const listsWithQRCodes = await Promise.all(
@@ -334,7 +357,9 @@ const listController = {
             tags.every((tag: string) => listTags.includes(tag))
           );
         });
-        return res.status(200).json({ lists: filteredLists });
+        return res
+          .status(200)
+          .json({ lists: filteredLists, totalPages: totalPages });
       }
 
       if (title && creator_id) {
@@ -343,7 +368,9 @@ const listController = {
             list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
             list.creator_id === parseInt(creator_id.toString())
         );
-        return res.status(200).json({ lists: filteredLists });
+        return res
+          .status(200)
+          .json({ lists: filteredLists, totalPages: totalPages });
       }
 
       if (title && tags) {
@@ -354,7 +381,9 @@ const listController = {
             tags.every((tag: string) => listTags.includes(tag))
           );
         });
-        return res.status(200).json({ lists: filteredLists });
+        return res
+          .status(200)
+          .json({ lists: filteredLists, totalPages: totalPages });
       }
 
       if (creator_id && tags) {
@@ -365,7 +394,9 @@ const listController = {
             tags.every((tag: string) => listTags.includes(tag))
           );
         });
-        return res.status(200).json({ lists: filteredLists });
+        return res
+          .status(200)
+          .json({ lists: filteredLists, totalPages: totalPages });
       }
 
       if (title) {
@@ -373,14 +404,18 @@ const listController = {
           list.title.toLowerCase().includes(title.toString().toLowerCase())
         );
 
-        return res.status(200).json({ lists: filteredLists });
+        return res
+          .status(200)
+          .json({ lists: filteredLists, totalPages: totalPages });
       }
 
       if (creator_id) {
         const filteredLists = listsWithQRCodes.filter(
           (list) => list.creator_id === parseInt(creator_id.toString())
         );
-        return res.status(200).json({ lists: filteredLists });
+        return res
+          .status(200)
+          .json({ lists: filteredLists, totalPages: totalPages });
       }
 
       if (tags) {
@@ -388,10 +423,12 @@ const listController = {
           const listTags = list.tags.map((tag) => tag.name);
           return tags.every((tag: string) => listTags.includes(tag));
         });
-        return res.status(200).json({ lists: filteredLists });
+        return res
+          .status(200)
+          .json({ lists: filteredLists, totalPages: totalPages });
       }
 
-      return res.status(200).json({ listsWithQRCodes });
+      return res.status(200).json({ listsWithQRCodes, totalPages: totalPages });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
