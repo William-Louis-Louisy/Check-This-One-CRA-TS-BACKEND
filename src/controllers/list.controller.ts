@@ -136,6 +136,7 @@ const listController = {
         select: { liked_by: { id: true, user_name: true, avatar: true } },
         take: paginate ? limit : undefined,
         skip: paginate ? (page - 1) * limit : undefined,
+        order: { creation_date: "DESC" },
       };
 
       const [results, total] = await dataSource
@@ -144,9 +145,22 @@ const listController = {
 
       const totalPages = paginate ? Math.ceil(total / limit) : 1;
 
+      // Generate qrcodes for each list
+      const listsWithQRCodes = await Promise.all(
+        results.map(async (list) => {
+          const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
+          const qrCodeDataURL = await generateQRCodeDataURL(url);
+          return { ...list, qrCodeDataURL };
+        })
+      );
+
       return res
         .status(200)
-        .json(paginate ? { results, total, page, totalPages } : { results });
+        .json(
+          paginate
+            ? { results: listsWithQRCodes, total, page, totalPages }
+            : { results: listsWithQRCodes }
+        );
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -161,7 +175,13 @@ const listController = {
         relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
-      return res.status(200).json({ list });
+
+      // Generate qrcode for the list
+      const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
+      const qrCodeDataURL = await generateQRCodeDataURL(url);
+      const listWithQRCodes = { ...list, qrCodeDataURL };
+
+      return res.status(200).json({ list: listWithQRCodes });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -330,6 +350,7 @@ const listController = {
         },
         take: paginate ? limit : undefined,
         skip: paginate ? (page - 1) * limit : undefined,
+        order: { creation_date: "DESC" },
       });
 
       const total = await listRepository.count({
