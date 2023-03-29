@@ -14,6 +14,18 @@ const createToken = (id: number, user_name: string) => {
   });
 };
 
+const QRCode = require("qrcode");
+
+async function generateQRCodeDataURL(url: string) {
+  try {
+    const qrCodeDataURL = await QRCode.toDataURL(url);
+    return qrCodeDataURL;
+  } catch (err) {
+    console.error("Erreur lors de la génération du QR Code", err);
+    return null;
+  }
+}
+
 const UserController = {
   // CREATE USER
   createUser: async (req: Request, res: Response, next: NextFunction) => {
@@ -176,7 +188,23 @@ const UserController = {
           "liked_lists.content.seen_by",
         ],
       });
-      return res.status(200).json({ lists: user.liked_lists });
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const lists = user.liked_lists;
+
+      // Generate qrcodes for each list
+      const listsWithQRCodes = await Promise.all(
+        lists.map(async (list) => {
+          const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
+          const qrCodeDataURL = await generateQRCodeDataURL(url);
+          return { ...list, qrCodeDataURL };
+        })
+      );
+
+      return res.status(200).json({ lists: listsWithQRCodes });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
