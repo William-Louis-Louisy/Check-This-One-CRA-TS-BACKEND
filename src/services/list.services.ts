@@ -25,7 +25,7 @@ export const addContentToListService = async (listId: number, data: any) => {
     newContent.type = existingContent.type;
     newContent.seen = existingContent.seen;
   } else {
-    if (data.type === "youtube") {
+    if (data.type === "youtube" || data.type === "podcast") {
       newContent.provider_id_string = data.provider_id;
       newContent.title = data.title;
       newContent.poster_path = data.poster_path;
@@ -51,6 +51,7 @@ export const addContentToListService = async (listId: number, data: any) => {
   if (
     contentType === "movie" ||
     contentType === "show" ||
+    contentType === "podcast" ||
     contentType === "youtube"
   ) {
     if (list.type !== contentType && list.type !== "mixed") {

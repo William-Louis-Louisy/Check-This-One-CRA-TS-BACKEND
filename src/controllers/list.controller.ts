@@ -326,8 +326,34 @@ const listController = {
       const title = req.query.title;
       const creator_id = req.query.creator_id;
       const tags = req.body.tags;
+      const type = req.query.type;
 
-      // Get pagination options from query parameters
+      const listRepository = dataSource.getRepository(List);
+      const lists = await listRepository.find({
+        where: { privacy: "public" },
+        relations: ["liked_by", "tags", "content", "content.seen_by"],
+        select: {
+          liked_by: { id: true, user_name: true, avatar: true },
+        },
+        order: { creation_date: "DESC" },
+      });
+
+      // Filter by title, creator_id, tags, and type
+      const filteredLists = lists.filter((list) => {
+        const listTags = list.tags.map((tag) => tag.name);
+        return (
+          (!title ||
+            list.title
+              .toLowerCase()
+              .includes(title.toString().toLowerCase())) &&
+          (!creator_id ||
+            list.creator_id === parseInt(creator_id.toString())) &&
+          (!tags || tags.every((tag: string) => listTags.includes(tag))) &&
+          (!type || list.type === type)
+        );
+      });
+
+      // Pagination
       const limit = parseInt(req.query.limit as string) || 10;
       const page = parseInt(req.query.page as string) || 1;
       const paginate = req.query.paginate !== "false";
@@ -341,115 +367,26 @@ const listController = {
         });
       }
 
-      const listRepository = dataSource.getRepository(List);
-      const lists = await listRepository.find({
-        where: { privacy: "public" },
-        relations: ["liked_by", "tags", "content", "content.seen_by"],
-        select: {
-          liked_by: { id: true, user_name: true, avatar: true },
-        },
-        take: paginate ? limit : undefined,
-        skip: paginate ? (page - 1) * limit : undefined,
-        order: { creation_date: "DESC" },
-      });
-
-      const total = await listRepository.count({
-        where: { privacy: "public" },
-      });
-
+      const total = filteredLists.length;
       const totalPages = paginate ? Math.ceil(total / limit) : 1;
+
+      // Apply pagination
+      const paginatedLists = paginate
+        ? filteredLists.slice((page - 1) * limit, page * limit)
+        : filteredLists;
 
       // Generate qrcodes for each list
       const listsWithQRCodes = await Promise.all(
-        lists.map(async (list) => {
+        paginatedLists.map(async (list) => {
           const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
           const qrCodeDataURL = await generateQRCodeDataURL(url);
           return { ...list, qrCodeDataURL };
         })
       );
 
-      // Filter by title and creator_id and tags
-      if (title && creator_id && tags) {
-        const filteredLists = listsWithQRCodes.filter((list) => {
-          const listTags = list.tags.map((tag) => tag.name);
-          return (
-            list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
-            list.creator_id === parseInt(creator_id.toString()) &&
-            tags.every((tag: string) => listTags.includes(tag))
-          );
-        });
-        return res
-          .status(200)
-          .json({ lists: filteredLists, totalPages: totalPages });
-      }
-
-      if (title && creator_id) {
-        const filteredLists = listsWithQRCodes.filter(
-          (list) =>
-            list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
-            list.creator_id === parseInt(creator_id.toString())
-        );
-        return res
-          .status(200)
-          .json({ lists: filteredLists, totalPages: totalPages });
-      }
-
-      if (title && tags) {
-        const filteredLists = listsWithQRCodes.filter((list) => {
-          const listTags = list.tags.map((tag) => tag.name);
-          return (
-            list.title.toLowerCase().includes(title.toString().toLowerCase()) &&
-            tags.every((tag: string) => listTags.includes(tag))
-          );
-        });
-        return res
-          .status(200)
-          .json({ lists: filteredLists, totalPages: totalPages });
-      }
-
-      if (creator_id && tags) {
-        const filteredLists = listsWithQRCodes.filter((list) => {
-          const listTags = list.tags.map((tag) => tag.name);
-          return (
-            list.creator_id === parseInt(creator_id.toString()) &&
-            tags.every((tag: string) => listTags.includes(tag))
-          );
-        });
-        return res
-          .status(200)
-          .json({ lists: filteredLists, totalPages: totalPages });
-      }
-
-      if (title) {
-        const filteredLists = listsWithQRCodes.filter((list) =>
-          list.title.toLowerCase().includes(title.toString().toLowerCase())
-        );
-
-        return res
-          .status(200)
-          .json({ lists: filteredLists, totalPages: totalPages });
-      }
-
-      if (creator_id) {
-        const filteredLists = listsWithQRCodes.filter(
-          (list) => list.creator_id === parseInt(creator_id.toString())
-        );
-        return res
-          .status(200)
-          .json({ lists: filteredLists, totalPages: totalPages });
-      }
-
-      if (tags) {
-        const filteredLists = listsWithQRCodes.filter((list) => {
-          const listTags = list.tags.map((tag) => tag.name);
-          return tags.every((tag: string) => listTags.includes(tag));
-        });
-        return res
-          .status(200)
-          .json({ lists: filteredLists, totalPages: totalPages });
-      }
-
-      return res.status(200).json({ listsWithQRCodes, totalPages: totalPages });
+      return res
+        .status(200)
+        .json({ lists: listsWithQRCodes, totalPages: totalPages });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
