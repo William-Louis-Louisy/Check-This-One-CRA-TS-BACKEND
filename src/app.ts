@@ -5,7 +5,6 @@ import { join } from "path";
 import cookieParser from "cookie-parser";
 import "reflect-metadata";
 import { setupRoutes } from "./routes";
-import { User } from "./models/user.model";
 require("dotenv").config();
 
 const app = express();

@@ -1,6 +1,12 @@
 import { dataSource } from "../app";
 import { Content } from "../models/content.model";
 import { List } from "../models/list.model";
+import {
+  checkMovieBuff,
+  checkPodcastAddict,
+  checkSupremeBingeWatcher,
+  checkYoutuber,
+} from "./badge.services";
 
 // ADD CONTENT TO LIST
 export const addContentToListService = async (listId: number, data: any) => {
@@ -46,6 +52,10 @@ export const addContentToListService = async (listId: number, data: any) => {
   // Get list from database
   const list = await listRepository.findOne({ where: { id: listId } });
 
+  if (!list) {
+    throw new Error(`List not found with id: ${listId}`);
+  }
+
   // Update list type from content type
   const contentType = newContent.type;
   if (
@@ -73,4 +83,21 @@ export const addContentToListService = async (listId: number, data: any) => {
 
   // Save list to database
   await listRepository.save(list);
+
+  // Check if user has new badges
+  if (list.type === "podcast") {
+    await checkPodcastAddict(list.creator_id);
+  }
+
+  if (list.type === "movie") {
+    await checkMovieBuff(list.creator_id);
+  }
+
+  if (list.type === "show") {
+    await checkSupremeBingeWatcher(list.creator_id);
+  }
+
+  if (list.type === "youtube") {
+    await checkYoutuber(list.creator_id);
+  }
 };

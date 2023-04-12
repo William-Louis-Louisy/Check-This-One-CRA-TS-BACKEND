@@ -278,6 +278,30 @@ const UserController = {
       return res.status(500).json({ message: error.message });
     }
   },
+
+  // GET ALL BADGES OF A USER
+  getAllBadgesOfUser: async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const userRepository = dataSource.getRepository(User);
+      const user = await userRepository.findOne({
+        where: { id: userId },
+        relations: ["unlocked_badges", "unlocked_badges.badge"],
+      });
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const badges = user.unlocked_badges.map(
+        (unlockedBadge) => unlockedBadge.badge
+      );
+
+      return res.status(200).json({ badges });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
 };
 
 export default UserController;

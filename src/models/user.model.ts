@@ -3,15 +3,15 @@ import {
   PrimaryGeneratedColumn,
   Column,
   BeforeInsert,
-  BeforeUpdate,
   OneToMany,
   ManyToMany,
   JoinTable,
-  Index,
 } from "typeorm";
 import bcrypt from "bcrypt";
 import { List } from "./list.model";
 import { Content } from "./content.model";
+import { Badge } from "./badge.model";
+import { UnlockedBadge } from "./unlockedBadge.model";
 
 @Entity()
 export class User {
@@ -55,6 +55,9 @@ export class User {
   @ManyToMany(() => Content, (content) => content.seen_by)
   @JoinTable()
   seen_content: Content[];
+
+  @OneToMany(() => UnlockedBadge, (unlockedBadge) => unlockedBadge.user)
+  unlocked_badges: UnlockedBadge[];
 
   @BeforeInsert()
   async hashPassword() {

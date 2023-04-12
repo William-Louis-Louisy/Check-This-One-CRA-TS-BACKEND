@@ -36,4 +36,7 @@ userRouter.get(
   UserController.checkEmailAvailability
 );
 
+// GET ALL BADGES OF A USER
+userRouter.get("/user/:id/badges", UserController.getAllBadgesOfUser);
+
 export default userRouter;
