@@ -8,11 +8,12 @@ import { NextFunction, Request, Response } from "express";
 import { addContentToListService } from "../services/list.services";
 import {
   checkBuddingInfluencer,
+  checkInitiationLists,
   checkLegendaryInfluencer,
+  checkListArtisan,
   checkListGuru,
   checkMasterOfInfluence,
   checkNewbie,
-  checkPodcastAddict,
 } from "../services/badge.services";
 const QRCode = require("qrcode");
 
@@ -83,6 +84,8 @@ const listController = {
       await dataSource.getRepository(List).save(list);
 
       await checkNewbie(parseInt(userId));
+      await checkInitiationLists(parseInt(userId));
+      await checkListArtisan(parseInt(userId));
       await checkListGuru(parseInt(userId));
 
       return res.status(200).json({ message: "List created" });

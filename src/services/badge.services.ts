@@ -29,18 +29,19 @@ export const getBadgeById = async (badge_id: number) => {
 // CHECK IF USER HAS ALREADY UNLOCKED A BADGE
 export const userHasBadge = async (user_id: number, badge_id: number) => {
   try {
-    const badgeRepository = dataSource.getRepository(Badge);
-    const badge = await badgeRepository.findOne({
-      where: { id: badge_id },
-      relations: ["unlocked_badges"],
+    const userRepository = dataSource.getRepository(User);
+    const user = await userRepository.findOne({
+      where: { id: user_id },
+      relations: ["unlocked_badges", "unlocked_badges.badge"],
     });
 
-    if (!badge) {
-      throw new Error("Badge not found");
+    if (!user) {
+      throw new Error("User not found");
     }
 
-    const userHasBadge = badge.unlocked_badges.some(
-      (unlockedBadge) => unlockedBadge.user && unlockedBadge.user.id === user_id
+    const userHasBadge = user.unlocked_badges.some(
+      (unlockedBadge) =>
+        unlockedBadge.badge && unlockedBadge.badge.id === badge_id
     );
 
     return userHasBadge;

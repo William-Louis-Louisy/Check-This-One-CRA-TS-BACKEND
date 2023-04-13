@@ -39,4 +39,7 @@ userRouter.get(
 // GET ALL BADGES OF A USER
 userRouter.get("/user/:id/badges", UserController.getAllBadgesOfUser);
 
+// GET USER STATS
+userRouter.get("/user/:id/stats", UserController.getUserStats);
+
 export default userRouter;

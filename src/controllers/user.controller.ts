@@ -2,7 +2,12 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { dataSource } from "../app";
 import { NextFunction, Request, Response } from "express";
-import { createUserService } from "../services/user.services";
+import {
+  createUserService,
+  getListCountByUser,
+  getListCountByUserAndType,
+  getTotalLikesByUser,
+} from "../services/user.services";
 import { User } from "../models/user.model";
 import { List } from "../models/list.model";
 
@@ -298,6 +303,45 @@ const UserController = {
       );
 
       return res.status(200).json({ badges });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // GET USER STATS
+  getUserStats: async (req: Request, res: Response) => {
+    try {
+      // Get user id from request
+      const userId = parseInt(req.params.id);
+
+      // Get list count
+      const listCount = await getListCountByUser(userId);
+
+      // Get list count by category
+      const moviesListCount = await getListCountByUserAndType(userId, "movie");
+      const showsListCount = await getListCountByUserAndType(userId, "show");
+      const podcastsListCount = await getListCountByUserAndType(
+        userId,
+        "podcast"
+      );
+      const youtubesListCount = await getListCountByUserAndType(
+        userId,
+        "youtube"
+      );
+      const mixedListCount = await getListCountByUserAndType(userId, "mixed");
+
+      // Get likes count
+      const likesCount = await getTotalLikesByUser(userId);
+
+      return res.status(200).json({
+        listCount,
+        moviesListCount,
+        showsListCount,
+        podcastsListCount,
+        youtubesListCount,
+        mixedListCount,
+        likesCount,
+      });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
