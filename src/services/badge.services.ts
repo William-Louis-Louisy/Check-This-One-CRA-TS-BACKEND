@@ -240,3 +240,23 @@ export const checkLegendaryInfluencer = async (user_id: number) => {
     throw error;
   }
 };
+
+// CHECK BADGES FOR ALL USERS
+export const checkAllBadgesForAllUsers = async () => {
+  const userRepository = dataSource.getRepository(User);
+  const users = await userRepository.find();
+
+  users.forEach(async (user) => {
+    await checkNewbie(user.id);
+    await checkInitiationLists(user.id);
+    await checkListArtisan(user.id);
+    await checkListGuru(user.id);
+    await checkPodcastAddict(user.id);
+    await checkMovieBuff(user.id);
+    await checkSupremeBingeWatcher(user.id);
+    await checkYoutuber(user.id);
+    await checkBuddingInfluencer(user.id);
+    await checkMasterOfInfluence(user.id);
+    await checkLegendaryInfluencer(user.id);
+  });
+};

@@ -7,6 +7,7 @@ import "reflect-metadata";
 import { setupRoutes } from "./routes";
 import cron from "node-cron";
 import { deleteOldNotifications } from "./services/notification.services";
+import { checkAllBadgesForAllUsers } from "./services/badge.services";
 require("dotenv").config();
 
 const app = express();
@@ -54,6 +55,7 @@ dataSource
   .initialize()
   .then(async () => {
     console.log("🟢 Connected to MySQL database!");
+    await checkAllBadgesForAllUsers();
     app.listen(port, () => {
       console.log(`🟢 Server started on port ${port}`);
     });
