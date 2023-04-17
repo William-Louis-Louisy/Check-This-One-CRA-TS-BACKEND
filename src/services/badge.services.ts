@@ -2,6 +2,7 @@ import { dataSource } from "../app";
 import { Badge } from "../models/badge.model";
 import { UnlockedBadge } from "../models/unlockedBadge.model";
 import { User } from "../models/user.model";
+import { createNotification } from "./notification.services";
 import {
   getListCountByUser,
   getListCountByUserAndType,
@@ -75,6 +76,12 @@ export const addUserBadge = async (user_id: number, badge_id: number) => {
 
     const unlockedBadgeRepository = dataSource.getRepository(UnlockedBadge);
     await unlockedBadgeRepository.save(unlockedBadge);
+
+    // Create notification for the user
+    const message = `Vous avez débloqué le badge ${badge.name}`;
+    const message_en = `You unlocked the badge ${badge.name_en}`;
+    const type = "badge";
+    await createNotification(user_id, message, message_en, type);
 
     return unlockedBadge;
   } catch (error) {

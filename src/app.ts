@@ -5,6 +5,8 @@ import { join } from "path";
 import cookieParser from "cookie-parser";
 import "reflect-metadata";
 import { setupRoutes } from "./routes";
+import cron from "node-cron";
+import { deleteOldNotifications } from "./services/notification.services";
 require("dotenv").config();
 
 const app = express();
@@ -60,9 +62,5 @@ dataSource
     console.error("🔴 Error connecting to MySQL database!", error);
   });
 
-// "*",
-//     "localhost:3000",
-//     "http://localhost:3000",
-//     "212.227.70.139",
-//     "https://checkthisone.vercel.app",
-//     "checkthisone.vercel.app",
+// Run the notification deletion service every day at 00:00
+cron.schedule("0 0 * * *", deleteOldNotifications);
