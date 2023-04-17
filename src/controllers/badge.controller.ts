@@ -108,6 +108,18 @@ const BadgeController = {
       return res.status(400).json({ message: error.message });
     }
   },
+
+  // DROP TABLE IF EXISTS `badge`;
+  dropBadgeTable: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const badgeRepository = dataSource.getRepository(Badge);
+      await badgeRepository.query("DROP TABLE IF EXISTS `badge`");
+
+      return res.status(200).json({ message: "Badge table dropped" });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
 };
 
 export default BadgeController;
