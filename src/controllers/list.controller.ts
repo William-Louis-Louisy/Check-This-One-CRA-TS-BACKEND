@@ -6,6 +6,15 @@ import { List } from "../models/list.model";
 import { Content } from "../models/content.model";
 import { NextFunction, Request, Response } from "express";
 import { addContentToListService } from "../services/list.services";
+import {
+  checkBuddingInfluencer,
+  checkInitiationLists,
+  checkLegendaryInfluencer,
+  checkListArtisan,
+  checkListGuru,
+  checkMasterOfInfluence,
+  checkNewbie,
+} from "../services/badge.services";
 const QRCode = require("qrcode");
 
 async function generateQRCodeDataURL(url: string) {
@@ -73,6 +82,12 @@ const listController = {
       list.tags = tagsArray;
 
       await dataSource.getRepository(List).save(list);
+
+      await checkNewbie(parseInt(userId));
+      await checkInitiationLists(parseInt(userId));
+      await checkListArtisan(parseInt(userId));
+      await checkListGuru(parseInt(userId));
+
       return res.status(200).json({ message: "List created" });
     } catch (error) {
       return res.status(400).json({ message: error.message });
@@ -462,6 +477,11 @@ const listController = {
             listRepository.save(list),
             userRepository.save(user),
           ]);
+
+          // Badge checking functions
+          await checkBuddingInfluencer(list.creator_id);
+          await checkMasterOfInfluence(list.creator_id);
+          await checkLegendaryInfluencer(list.creator_id);
 
           return res.status(200).json({ message: "Like added" });
         }
