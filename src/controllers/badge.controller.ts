@@ -113,6 +113,24 @@ const BadgeController = {
   dropBadgeTable: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const badgeRepository = dataSource.getRepository(Badge);
+      const connection = badgeRepository.manager.connection;
+
+      // Obtenez la liste des contraintes de clé étrangère de la table `badge`
+      const foreignKeyConstraints = await connection.query(`
+        SELECT constraint_name, table_name
+        FROM information_schema.referential_constraints
+        WHERE referenced_table_name = 'badge'
+      `);
+
+      // Supprimez les contraintes de clé étrangère des autres tables
+      for (const constraint of foreignKeyConstraints) {
+        await connection.query(`
+          ALTER TABLE ${constraint.table_name}
+          DROP FOREIGN KEY ${constraint.constraint_name}
+        `);
+      }
+
+      // Supprimez la table `badge`
       await badgeRepository.query("DROP TABLE IF EXISTS `badge`");
 
       return res.status(200).json({ message: "Badge table dropped" });
