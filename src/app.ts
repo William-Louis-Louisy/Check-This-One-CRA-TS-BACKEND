@@ -60,7 +60,6 @@ dataSource
   .initialize()
   .then(async () => {
     console.log("🟢 Connected to MySQL database!");
-    await checkAllBadgesForAllUsers();
     app.listen(port, () => {
       console.log(`🟢 Server started on port ${port}`);
     });
