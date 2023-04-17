@@ -29,6 +29,42 @@ const BadgeController = {
       return res.status(400).json({ message: error.message });
     }
   },
+
+  // GET ALL BADGES
+  getAllBadges: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const badgeRepository = dataSource.getRepository(Badge);
+      const badges = await badgeRepository.find();
+
+      return res.status(200).json({ badges });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // DELETE BADGE
+  deleteBadge: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const badge_id = req.params.id;
+      if (!badge_id) {
+        return res.status(400).json({ message: "Missing badge id" });
+      }
+
+      const badgeRepository = dataSource.getRepository(Badge);
+      const badge = await badgeRepository.findOne({
+        where: { id: parseInt(badge_id) },
+      });
+      if (!badge) {
+        return res.status(400).json({ message: "Badge not found" });
+      }
+
+      await badgeRepository.remove(badge);
+
+      return res.status(200).json({ message: "Badge deleted" });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
 };
 
 export default BadgeController;

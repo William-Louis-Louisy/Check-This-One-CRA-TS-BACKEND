@@ -6,4 +6,10 @@ const badgeRouter = express.Router();
 // CREATE BADGE
 badgeRouter.post("/badge", BadgeController.createBadge);
 
+// GET ALL BADGES
+badgeRouter.get("/badges", BadgeController.getAllBadges);
+
+// DELETE BADGE
+badgeRouter.delete("/badge/:id", BadgeController.deleteBadge);
+
 export default badgeRouter;
