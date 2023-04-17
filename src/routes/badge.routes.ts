@@ -12,4 +12,7 @@ badgeRouter.get("/badges", BadgeController.getAllBadges);
 // DELETE BADGE
 badgeRouter.delete("/badge/:id", BadgeController.deleteBadge);
 
+// UPDATE BADGE
+badgeRouter.put("/badge/:id", BadgeController.updateBadge);
+
 export default badgeRouter;

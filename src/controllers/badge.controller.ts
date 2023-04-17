@@ -65,6 +65,49 @@ const BadgeController = {
       return res.status(400).json({ message: error.message });
     }
   },
+
+  // UPDATE BADGE
+  updateBadge: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const badge_id = req.params.id;
+      if (!badge_id) {
+        return res.status(400).json({ message: "Missing badge id" });
+      }
+
+      const badgeRepository = dataSource.getRepository(Badge);
+      const badge = await badgeRepository.findOne({
+        where: { id: parseInt(badge_id) },
+      });
+      if (!badge) {
+        return res.status(400).json({ message: "Badge not found" });
+      }
+
+      const { name, name_en, description, description_en, icon, id } = req.body;
+      if (
+        !name ||
+        !name_en ||
+        !description ||
+        !description_en ||
+        !icon ||
+        !id
+      ) {
+        return res.status(400).json({ message: "Missing badge data" });
+      }
+
+      badge.id = id;
+      badge.name = name;
+      badge.name_en = name_en;
+      badge.description = description;
+      badge.description_en = description_en;
+      badge.icon = icon;
+
+      const savedBadge = await badgeRepository.save(badge);
+
+      return res.status(200).json({ badge: savedBadge });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
 };
 
 export default BadgeController;
