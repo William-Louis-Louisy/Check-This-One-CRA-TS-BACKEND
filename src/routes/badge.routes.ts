@@ -16,6 +16,6 @@ badgeRouter.delete("/badge/:id", BadgeController.deleteBadge);
 badgeRouter.put("/badge/:id", BadgeController.updateBadge);
 
 // DROP BADGE TABLE
-badgeRouter.get("/drop-badge-table", BadgeController.dropBadgeTable);
+// badgeRouter.get("/drop-badge-table", BadgeController.dropBadgeTable);
 
 export default badgeRouter;
