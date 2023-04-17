@@ -56,30 +56,18 @@ export const addContentToListService = async (listId: number, data: any) => {
     throw new Error(`List not found with id: ${listId}`);
   }
 
-  // Update list type from content type
-  const contentType = newContent.type;
-  if (
-    contentType === "movie" ||
-    contentType === "show" ||
-    contentType === "podcast" ||
-    contentType === "youtube"
-  ) {
-    if (list.type !== contentType && list.type !== "mixed") {
-      list.type = contentType;
-    }
-  } else {
-    throw new Error(`Invalid content type: ${contentType}`);
-  }
-
-  if (
-    list.type !== "mixed" &&
-    list.content.some((c) => c.type !== contentType)
-  ) {
-    list.type = "mixed";
-  }
-
   // Add content to list
   list.content.push(newContent);
+
+  // Update list type
+  const contentTypes = list.content.map((c) => c.type);
+  const uniqueContentTypes = Array.from(new Set(contentTypes));
+
+  if (uniqueContentTypes.length === 1) {
+    list.type = uniqueContentTypes[0];
+  } else {
+    list.type = "mixed";
+  }
 
   // Save list to database
   await listRepository.save(list);

@@ -287,8 +287,25 @@ const listController = {
       const content = await contentRepository.findOne({
         where: { id: contentId },
       });
+
+      // Remove content from list
       list.content = list.content.filter((c) => c.id !== content.id);
+
+      // Update list type
+      const contentTypes = list.content.map((c) => c.type);
+      const uniqueContentTypes = Array.from(new Set(contentTypes));
+
+      if (uniqueContentTypes.length === 0) {
+        list.type = "empty";
+      } else if (uniqueContentTypes.length === 1) {
+        list.type = uniqueContentTypes[0];
+      } else {
+        list.type = "mixed";
+      }
+
+      // Save updated list to database
       await listRepository.save(list);
+
       return res.status(200).json({ message: "Content deleted from list" });
     } catch (error) {
       return res.status(400).json({ message: error.message });
