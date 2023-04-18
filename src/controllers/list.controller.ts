@@ -187,7 +187,7 @@ const listController = {
       const id = parseInt(req.params.id);
       const list = await dataSource.getRepository(List).findOne({
         where: { id: id },
-        relations: ["liked_by", "tags"],
+        relations: ["liked_by", "tags", "content", "content.seen_by"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
 
