@@ -16,7 +16,7 @@ listRouter.get("/lists/getAllPublic", ListController.getAllPublicLists);
 listRouter.get("/lists/getByUserId/:id", ListController.getListsByUserId);
 
 // GET LIST BY ID
-listRouter.get("/list/getById/:id", ListController.getListById);
+listRouter.get("/list/getById/:id/user/:userId", ListController.getListById);
 
 // ADD CONTENT TO A LIST
 listRouter.put("/:id/content", ListController.addContentToList);

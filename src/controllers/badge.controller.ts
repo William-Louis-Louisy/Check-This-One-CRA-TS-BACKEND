@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { Badge } from "../models/badge.model";
 import { dataSource } from "../app";
+import { checkAllBadgesForAllUsers } from "../services/badge.services";
 
 const BadgeController = {
   // CREATE BADGE
@@ -104,6 +105,21 @@ const BadgeController = {
       const savedBadge = await badgeRepository.save(badge);
 
       return res.status(200).json({ badge: savedBadge });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // CHECK BADGES FOR ALL USERS
+  badgesVerification: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      checkAllBadgesForAllUsers();
+
+      return res.status(200).json({ message: "Badges verification started" });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }

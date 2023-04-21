@@ -183,6 +183,20 @@ const UserController = {
     next: NextFunction
   ) => {
     try {
+      // Get pagination options from query
+      const limit = parseInt(req.query.limit as string) || 10;
+      const page = parseInt(req.query.page as string) || 1;
+      const paginate = req.query.paginate !== "false";
+      const validLimits = [10, 20, 50, 100];
+
+      // Validate the limit value
+      if (!validLimits.includes(limit) && paginate) {
+        return res.status(400).json({
+          message:
+            "Invalid limit value. It should be one of these values: 10, 20, 50, 100.",
+        });
+      }
+
       const userId = parseInt(req.params.id);
       const userRepository = dataSource.getRepository(User);
       const user = await userRepository.findOne({
@@ -200,16 +214,26 @@ const UserController = {
 
       const lists = user.liked_lists;
 
+      // Paginate the lists
+      const total = lists.length;
+      const totalPage = paginate ? Math.ceil(total / limit) : 1;
+
+      const paginatedLists = paginate
+        ? lists.slice((page - 1) * limit, page * limit)
+        : lists;
+
       // Generate qrcodes for each list
       const listsWithQRCodes = await Promise.all(
-        lists.map(async (list) => {
+        paginatedLists.map(async (list) => {
           const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
           const qrCodeDataURL = await generateQRCodeDataURL(url);
           return { ...list, qrCodeDataURL };
         })
       );
 
-      return res.status(200).json({ lists: listsWithQRCodes });
+      return res
+        .status(200)
+        .json({ lists: listsWithQRCodes, total: total, totalPage: totalPage });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
