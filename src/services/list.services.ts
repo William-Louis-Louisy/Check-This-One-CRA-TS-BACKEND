@@ -1,6 +1,7 @@
 import { dataSource } from "../app";
 import { Content } from "../models/content.model";
 import { List } from "../models/list.model";
+import { User } from "../models/user.model";
 import {
   checkMovieBuff,
   checkPodcastAddict,
@@ -88,4 +89,20 @@ export const addContentToListService = async (listId: number, data: any) => {
   if (list.type === "youtube") {
     await checkYoutuber(list.creator_id);
   }
+};
+
+export const calculateCompletionPercentage = (
+  list: List,
+  user?: User
+): number => {
+  if (!user) {
+    return 0;
+  }
+
+  const totalContent = list.content.length;
+  const seenContent = list.content.filter((content) =>
+    user.seen_content.some((seen) => seen.id === content.id)
+  ).length;
+
+  return totalContent ? Math.round((seenContent / totalContent) * 100) : 0;
 };

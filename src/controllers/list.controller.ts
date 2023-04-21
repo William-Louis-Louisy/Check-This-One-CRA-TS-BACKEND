@@ -5,7 +5,10 @@ import { User } from "../models/user.model";
 import { List } from "../models/list.model";
 import { Content } from "../models/content.model";
 import { NextFunction, Request, Response } from "express";
-import { addContentToListService } from "../services/list.services";
+import {
+  addContentToListService,
+  calculateCompletionPercentage,
+} from "../services/list.services";
 import {
   checkBuddingInfluencer,
   checkInitiationLists,
@@ -185,6 +188,13 @@ const listController = {
   getListById: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+
+      const user = await dataSource.getRepository(User).findOne({
+        where: { id: userId },
+        relations: ["liked_lists", "seen_content"],
+      });
+
       const list = await dataSource.getRepository(List).findOne({
         where: { id: id },
         relations: ["liked_by", "tags", "content", "content.seen_by"],
@@ -194,7 +204,12 @@ const listController = {
       // Generate qrcode for the list
       const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
       const qrCodeDataURL = await generateQRCodeDataURL(url);
-      const listWithQRCodes = { ...list, qrCodeDataURL };
+
+      const completionPercentage = userId
+        ? calculateCompletionPercentage(list, user)
+        : undefined;
+
+      const listWithQRCodes = { ...list, qrCodeDataURL, completionPercentage };
 
       return res.status(200).json({ list: listWithQRCodes });
     } catch (error) {
