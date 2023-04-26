@@ -10,7 +10,6 @@ import {
 import bcrypt from "bcrypt";
 import { List } from "./list.model";
 import { Content } from "./content.model";
-import { Badge } from "./badge.model";
 import { UnlockedBadge } from "./unlockedBadge.model";
 import { Notification } from "./notification.model";
 
@@ -62,6 +61,12 @@ export class User {
 
   @OneToMany(() => Notification, (notification) => notification.user)
   notifications: Notification[];
+
+  @Column({ name: "reset_password_token", nullable: true })
+  reset_password_token: string;
+
+  @Column({ name: "reset_password_expires", nullable: true })
+  reset_password_expires: Date;
 
   @BeforeInsert()
   async hashPassword() {

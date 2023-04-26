@@ -7,6 +7,9 @@ import {
   getListCountByUser,
   getListCountByUserAndType,
   getTotalLikesByUser,
+  sendResetPasswordEmail,
+  setResetPasswordToken,
+  verifyResetPasswordToken,
 } from "../services/user.services";
 import { User } from "../models/user.model";
 import { List } from "../models/list.model";
@@ -174,6 +177,61 @@ const UserController = {
       .clearCookie("access_token", { domain: ".localhost" })
       .status(200)
       .json({ status: 200, message: "Logout successful" });
+  },
+
+  // REQUEST RESET PASSWORD
+  requestResetPassword: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { email, lang } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Set the reset password token and expiration date for the user
+      const { user, reset_password_token } = await setResetPasswordToken(email);
+
+      // Send an email to the user with the reset password link (implemented in the next step)
+      await sendResetPasswordEmail(user, reset_password_token, lang);
+
+      return res.status(200).json({ message: "Reset password email sent" });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+  },
+
+  // RESET PASSWORD
+  resetPassword: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res
+          .status(400)
+          .json({ message: "Token and password are required" });
+      }
+
+      const user = await verifyResetPasswordToken(token);
+
+      if (!user) {
+        return res.status(400).json({ message: "Invalid token" });
+      }
+
+      // Set the new password for the user
+      user.password = await bcrypt.hash(password, 10);
+      user.reset_password_token = null;
+      user.reset_password_expires = null;
+
+      await dataSource.getRepository(User).save(user);
+
+      return res.status(200).json({ message: "Password reset successful" });
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
   },
 
   // GET LISTS LIKED BY A USER

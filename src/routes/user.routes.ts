@@ -42,4 +42,10 @@ userRouter.get("/user/:id/badges", UserController.getAllBadgesOfUser);
 // GET USER STATS
 userRouter.get("/user/:id/stats", UserController.getUserStats);
 
+// RESET USER PASSWORD
+userRouter.post("/reset-password", UserController.requestResetPassword);
+
+// RESET USER PASSWORD
+userRouter.post("/reset-password/confirm", UserController.resetPassword);
+
 export default userRouter;
