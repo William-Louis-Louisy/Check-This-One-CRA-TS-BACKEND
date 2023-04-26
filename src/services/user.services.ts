@@ -1,8 +1,9 @@
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { dataSource } from "../app";
 import { List } from "../models/list.model";
 import { User } from "../models/user.model";
-import transporter from "../middlewares/NodeMailerConfig";
+import sgMail from "../middlewares/NodeMailerConfig";
 require("dotenv").config();
 
 export const createUserService = async (datas: any) => {
@@ -117,22 +118,60 @@ export const setResetPasswordToken = async (email: string) => {
   }
 };
 
-export const sendResetPasswordEmail = async (user: User, token: string) => {
+export const sendResetPasswordEmail = async (
+  user: User,
+  token: string,
+  lang: string
+) => {
   try {
-    console.log("USER : ", user, "TOKEN : ", token);
-    console.log(process.env.EMAIL_USER, process.env.EMAIL_PASS);
     const resetPasswordUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: "Reset your password",
-      text: `Hi ${user.user_name}! You are receiving this email because you (or someone else) have requested the reset of the password for your account. Please click on the following link, or paste this into your browser to complete the process:\n\n${resetPasswordUrl}\n\nIf you did not request this, please ignore this email and your password will remain unchanged.`,
-    };
+    let msg;
+
+    if (lang === "fr") {
+      msg = {
+        to: user.email,
+        from: process.env.EMAIL_USER,
+        subject: "Réinitialisez votre mot de passe",
+        text: `Bonjour ${user.user_name}! Vous recevez cet e-mail parce que vous (ou quelqu'un d'autre) avez demandé la réinitialisation du mot de passe de votre compte. Veuillez cliquer sur le lien suivant ou le coller dans votre navigateur pour terminer la procédure:\n\n${resetPasswordUrl}\n\nSi vous n'avez pas fait cette demande, veuillez ignorer cet e-mail et votre mot de passe restera inchangé.`,
+      };
+    } else {
+      msg = {
+        to: user.email,
+        from: process.env.EMAIL_USER,
+        subject: "Reset your password",
+        text: `Hi ${user.user_name}! You are receiving this email because you (or someone else) have requested the reset of the password for your account. Please click on the following link, or paste this into your browser to complete the process:\n\n${resetPasswordUrl}\n\nIf you did not request this, please ignore this email and your password will remain unchanged.`,
+      };
+    }
 
     // Send the email
-    await transporter.sendMail(mailOptions);
+    await sgMail.send(msg);
   } catch (error) {
     throw error;
+  }
+};
+
+export const verifyResetPasswordToken = async (token: string) => {
+  try {
+    const user = await dataSource
+      .getRepository(User)
+      .findOne({ where: { reset_password_token: token } });
+
+    if (!user) {
+      return null;
+    }
+
+    const now = new Date();
+    if (
+      !user.reset_password_token ||
+      !user.reset_password_expires ||
+      user.reset_password_expires < now
+    ) {
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    return null;
   }
 };

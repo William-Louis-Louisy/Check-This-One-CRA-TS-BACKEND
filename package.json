@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sendgrid/mail": "^7.7.0",
     "@uploadcare/upload-client": "^6.2.1",
     "bcrypt": "^5.1.0",
     "cookie-parser": "^1.4.6",
@@ -21,7 +22,6 @@
     "jsonwebtoken": "^8.5.1",
     "mysql2": "^2.3.3",
     "node-cron": "^3.0.2",
-    "nodemailer": "^6.9.1",
     "qrcode": "^1.5.1",
     "ts-node-dev": "^2.0.0",
     "typeorm": "^0.3.11",
