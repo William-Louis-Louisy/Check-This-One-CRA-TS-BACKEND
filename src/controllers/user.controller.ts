@@ -272,13 +272,18 @@ const UserController = {
 
       const lists = user.liked_lists;
 
+      // Order the lists by creation date
+      const sortedLists = lists.sort((a, b) => {
+        return b.creation_date.getTime() - a.creation_date.getTime();
+      });
+
       // Paginate the lists
-      const total = lists.length;
+      const total = sortedLists.length;
       const totalPage = paginate ? Math.ceil(total / limit) : 1;
 
       const paginatedLists = paginate
-        ? lists.slice((page - 1) * limit, page * limit)
-        : lists;
+        ? sortedLists.slice((page - 1) * limit, page * limit)
+        : sortedLists;
 
       // Generate qrcodes for each list
       const listsWithQRCodes = await Promise.all(
