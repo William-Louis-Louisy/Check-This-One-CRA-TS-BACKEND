@@ -6,7 +6,13 @@ import { User } from "../models/user.model";
 import sgMail from "../middlewares/NodeMailerConfig";
 require("dotenv").config();
 
-export const createUserService = async (datas: any) => {
+interface UserData {
+  user_name: string;
+  email: string;
+  password: string;
+}
+
+export const createUserService = async (datas: UserData) => {
   try {
     // Create new user
     const user = new User();
