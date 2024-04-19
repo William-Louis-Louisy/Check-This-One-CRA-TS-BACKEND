@@ -34,6 +34,10 @@ async function generateQRCodeDataURL(url: string) {
   }
 }
 
+const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+const passwordRegex =
+  /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()-_=+[\]{}|;:'",.<>?`~])[A-Za-z\d!@#$%^&*()-_=+[\]{}|;:'",.<>?`~]{8,}$/;
+
 const UserController = {
   // CREATE USER
   createUser: async (req: Request, res: Response, next: NextFunction) => {
@@ -43,6 +47,35 @@ const UserController = {
       if (!user_name || !email || !password) {
         return res.status(400).json({ message: "Please fill all fields" });
       }
+      if (user_name.length < 5 || user_name.length > 16) {
+        return res
+          .status(400)
+          .json({ message: "Username must be between 5 and 16 characters" });
+      }
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+      if (!passwordRegex.test(password)) {
+        return res.status(400).json({ message: "Invalid password format" });
+      }
+
+      // CHECK IF USER_NAME IS ALREADY TAKEN
+      const userRepository = dataSource.getRepository(User);
+      const userNameExists = await userRepository.findOne({
+        where: { user_name: user_name },
+      });
+      if (userNameExists) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+
+      // CHECK IF USER ALREADY EXISTS
+      const userExists = await userRepository.findOne({
+        where: { email: email },
+      });
+      if (userExists) {
+        return res.status(400).json({ message: "Email already taken" });
+      }
+
       const user = await createUserService(req.body);
       // CREATE TOKEN
       const token = createToken(user.id, user.user_name);
