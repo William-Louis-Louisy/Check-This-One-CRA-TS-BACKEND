@@ -1,4 +1,5 @@
 import { Request, RequestHandler } from "express";
+import { getSessionJwt, hasValidCsrfToken, isSafeMethod } from "./session";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { dataSource } from "../app";
 import { List } from "../models/list.model";
@@ -19,19 +20,11 @@ declare global {
   }
 }
 
-const getToken = (req: Request): string | undefined => {
-  const authorization = req.headers.authorization;
-  if (authorization) {
-    const match = /^Bearer\s+(\S+)$/i.exec(authorization);
-    return match?.[1];
-  }
-  return undefined;
-};
 
 const resolvePrincipal = async (
   req: Request
 ): Promise<AuthPrincipal | undefined> => {
-  const token = getToken(req);
+  const token = getSessionJwt(req);
   if (!token) return undefined;
 
   const secret = process.env.JWT_SECRET;
@@ -75,7 +68,13 @@ export const authenticate: RequestHandler = async (req, res, next) => {
     if (!auth) {
       return res.status(401).json({ message: "Authentication required" });
     }
+    // Mutations backed by a browser cookie require the session-bound CSRF token.
+    if (!isSafeMethod(req.method) && !hasValidCsrfToken(req)) {
+      return res.status(403).json({ message: "Invalid CSRF token" });
+    }
     req.auth = auth;
+    // Authenticated responses must not be cached by a same-origin proxy/CDN.
+    res.setHeader("Cache-Control", "private, no-store");
     next();
   } catch (error) {
     next(error);
@@ -86,6 +85,8 @@ export const authenticate: RequestHandler = async (req, res, next) => {
 export const optionalAuthenticate: RequestHandler = async (req, res, next) => {
   try {
     req.auth = await resolvePrincipal(req);
+    // Public routes with owner-specific responses must not be cached either.
+    res.setHeader("Cache-Control", "private, no-store");
     next();
   } catch (error) {
     next(error);

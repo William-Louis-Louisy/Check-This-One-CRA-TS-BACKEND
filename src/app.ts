@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { getAllowedOrigins } from "./config/cors";
+import { requireTrustedBrowserOrigin } from "./middlewares/trusted-origin";
 import cookieParser from "cookie-parser";
 import { setupRoutes } from "./routes";
 import { dataSource } from "./database/data-source";
@@ -25,12 +26,13 @@ app.use(
       callback(null, !origin || allowedOrigins.has(origin)),
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "X-CSRF-Token"],
   })
 );
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(requireTrustedBrowserOrigin);
 
 // ROUTES
 setupRoutes(app);

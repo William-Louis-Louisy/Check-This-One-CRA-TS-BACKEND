@@ -17,7 +17,7 @@ badgeRouter.delete("/badge/:id", authenticate, requireAdmin, BadgeController.del
 badgeRouter.put("/badge/:id", authenticate, requireAdmin, BadgeController.updateBadge);
 
 // CHECK BADGES FOR ALL USERS
-badgeRouter.get("/check-badges", authenticate, requireAdmin, BadgeController.badgesVerification);
+badgeRouter.post("/check-badges", authenticate, requireAdmin, BadgeController.badgesVerification);
 
 // DROP BADGE TABLE
 // badgeRouter.get("/drop-badge-table", BadgeController.dropBadgeTable);

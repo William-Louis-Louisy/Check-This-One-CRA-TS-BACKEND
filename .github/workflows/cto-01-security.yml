@@ -2,7 +2,7 @@ name: CTO-01 Security Checks
 
 on:
   pull_request:
-    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos, security/cto-04-private-list-audit, security/cto-03a-session-revocation, security/cto-05-typeorm-migrations]
+    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos, security/cto-04-private-list-audit, security/cto-03a-session-revocation, security/cto-05-typeorm-migrations, security/cto-03b-http-only-csrf]
   workflow_dispatch:
 
 permissions:
@@ -117,3 +117,4 @@ jobs:
         run: |
           npm run build
           node scripts/test-typeorm-migrations.cjs
+          node scripts/test-cookie-attributes.cjs

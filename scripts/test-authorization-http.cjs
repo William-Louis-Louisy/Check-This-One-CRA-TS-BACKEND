@@ -5,17 +5,27 @@ const mysql = require("mysql2/promise");
 
 const BASE = "http://127.0.0.1:5000";
 
-async function request(method, path, token, body) {
+const csrfByCookie = new Map();
+
+async function request(method, path, cookie, body, options = {}) {
+  const safe = ["GET", "HEAD", "OPTIONS"].includes(method);
   const response = await fetch(BASE + path, {
     method,
     headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(cookie ? { Cookie: cookie } : {}),
       ...(body ? { "Content-Type": "application/json" } : {}),
+      ...(!safe && cookie && csrfByCookie.has(cookie) && !options.skipCsrf
+        ? { "X-CSRF-Token": csrfByCookie.get(cookie) }
+        : {}),
+      ...(options.headers || {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   const data = await response.json().catch(() => undefined);
-  return { status: response.status, data };
+  const setCookie = response.headers.get("set-cookie");
+  const newCookie = setCookie ? setCookie.split(";")[0] : undefined;
+  if (newCookie && data?.csrfToken) csrfByCookie.set(newCookie, data.csrfToken);
+  return { status: response.status, data, cookie: newCookie, setCookie };
 }
 
 const password = "SecuredPwd123!";
@@ -44,10 +54,21 @@ async function register(name, email, extra = {}) {
     ...extra,
   });
   assert.equal(response.status, 200, JSON.stringify(response));
-  assert.equal(typeof response.data.token, "string");
+  assert.equal(response.data.token, undefined, "Registration must not expose JWT");
+  assert.equal(response.cookie, undefined, "Registration must not establish a session");
   assert.equal(response.data.user.role, "user");
   assert.equal(response.data.user.password, undefined);
-  return { token: response.data.token, id: response.data.user.id };
+  const login = await request("POST", "/login", undefined, { email, password });
+  assert.equal(login.status, 200, JSON.stringify(login));
+  assert.ok(login.cookie?.startsWith("cto_session="));
+  assert.ok(login.setCookie.includes("HttpOnly"));
+  assert.ok(login.setCookie.includes("SameSite=Lax"));
+  assert.ok(login.setCookie.includes("Path=/"));
+  assert.ok(!login.setCookie.includes("Domain="));
+  assert.ok(!login.setCookie.includes("SameSite=None"));
+  assert.equal(login.data.token, undefined);
+  assert.match(login.data.csrfToken, /^[a-f0-9]{64}$/);
+  return { token: login.cookie, id: response.data.user.id };
 }
 
 async function run() {
@@ -63,7 +84,7 @@ async function run() {
     // Browser preflight: exact preview origin allowed, arbitrary origins denied.
     const preflightHeaders = {
       "Access-Control-Request-Method": "GET",
-      "Access-Control-Request-Headers": "authorization",
+      "Access-Control-Request-Headers": "x-csrf-token,content-type",
     };
     const trusted = await fetch(BASE + "/users/getAll", {
       method: "OPTIONS",
@@ -80,10 +101,46 @@ async function run() {
     assert.equal(blocked.headers.get("access-control-allow-origin"), null);
 
     assert.equal((await request("GET", "/users/getAll")).status, 401);
+    assert.equal((await request("GET", "/session")).status, 401);
+    assert.equal((await request("GET", "/users/getAll", undefined, undefined, {
+      headers: { Authorization: "Bearer invalid.token" }
+    })).status, 401);
     assert.equal((await request("POST", "/badge", undefined, {})).status, 401);
+    assert.equal((await request("GET", "/check-badges")).status, 404,
+      "Badge verification must never be a GET");
+    assert.equal((await request("POST", "/check-badges")).status, 401);
 
     const alice = await register("test_alice", "alice@example.test", { role: "admin" });
     const bob = await register("test_bobby", "bob@example.test");
+    const aliceSecondLogin = await request("POST", "/login", undefined, {
+      email: "alice@example.test", password
+    });
+    assert.equal(aliceSecondLogin.status, 200);
+    assert.ok(aliceSecondLogin.cookie);
+    const session = await request("GET", "/session", alice.token);
+    assert.equal(session.status, 200);
+    assert.equal(session.data.user.id, alice.id);
+    assert.equal(session.data.token, undefined);
+    // Session identity and CSRF responses must not be stored by intermediaries.
+    const rawSession = await fetch(BASE + "/session", {
+      headers: { Cookie: alice.token },
+    });
+    assert.match(rawSession.headers.get("cache-control") || "", /no-store/);
+    assert.match(session.data.csrfToken, /^[a-f0-9]{64}$/);
+
+    assert.equal((await request("PUT", `/update/${alice.id}`, alice.token, {},
+      { skipCsrf: true })).status, 403);
+    assert.equal((await request("PUT", `/update/${alice.id}`, alice.token, {},
+      { headers: { "X-CSRF-Token": "0".repeat(64) } })).status, 403);
+    assert.equal((await request("PUT", `/update/${alice.id}`, alice.token, {},
+      { headers: { Origin: "https://evil.example.test" } })).status, 403);
+    assert.equal((await request("PUT", `/update/${alice.id}`, alice.token, {},
+      { headers: { "Sec-Fetch-Site": "cross-site" } })).status, 403);
+    assert.equal((await request("PUT", `/update/${alice.id}`, alice.token, {},
+      { headers: { Origin: "https://cto01-preview.example.test" } })).status, 200);
+
+    assert.equal((await request("POST", "/login", undefined, { email: "alice@example.test", password },
+      { headers: { Origin: "https://evil.example.test" } })).status, 403);
 
     // Credentials must be absent even from deeply nested ORM relations.
     const publicAlice = await request("GET", `/user/${alice.id}`);
@@ -94,6 +151,11 @@ async function run() {
     assert.equal(publicAlice.data.user.seenContent, undefined);
     assert.equal(publicAlice.data.user.seenContentCount, undefined);
 
+    // A correctly signed JWT sent as Bearer must NOT authenticate:
+    // only the HttpOnly cookie is accepted after CTO-03b.
+    assert.equal((await request("GET", "/session", undefined, undefined, {
+      headers: { Authorization: "Bearer " + alice.token.slice("cto_session=".length) }
+    })).status, 401);
     const ownAlice = await request("GET", `/user/${alice.id}`, alice.token);
     assert.equal(ownAlice.status, 200);
     assertPublicResponse(ownAlice.data);
@@ -184,18 +246,24 @@ async function run() {
       icon: "shield",
     });
     assert.equal(badgeResult.status, 200, JSON.stringify(badgeResult));
+    assert.equal((await request("POST", "/check-badges", alice.token, undefined,
+      { skipCsrf: true })).status, 403);
     // Server-side logout invalidates signed JWTs, not merely the UI session.
     assert.equal((await request("POST", "/logout")).status, 401);
     assert.equal((await request("POST", "/logout", alice.token)).status, 200);
     assert.equal((await request("GET", "/users/getAll", alice.token)).status, 401);
+    assert.equal((await request("GET", "/session", alice.token)).status, 401);
+    assert.equal((await request("GET", "/session", aliceSecondLogin.cookie)).status, 401,
+      "Logout revokes every prior session for the account");
     assert.equal((await request("POST", "/logout", alice.token)).status, 401);
     const relogin = await request("POST", "/login", undefined, {
       email: "alice@example.test",
       password,
     });
     assert.equal(relogin.status, 200, JSON.stringify(relogin));
-    assert.notEqual(relogin.data.token, alice.token);
-    assert.equal((await request("GET", "/users/getAll", relogin.data.token)).status, 200);
+    assert.ok(relogin.cookie);
+    assert.notEqual(relogin.cookie, alice.token);
+    assert.equal((await request("GET", "/users/getAll", relogin.cookie)).status, 200);
     // Password-reset token and expiry are select:false, but the reset flow
     // must explicitly read them. A regular public API may never reveal them.
     const resetToken = "fixture_reset_token_bob";
@@ -235,7 +303,7 @@ async function run() {
       "Reset token must not be reusable"
     );
 
-    console.log("CTO-01/02/03a/04 HTTP authorization, privacy and revocation checks: OK");
+    console.log("CTO-01/02/03/04 HTTP cookie session, CSRF, privacy and revocation checks: OK");
   } finally {
     await db.end();
   }
