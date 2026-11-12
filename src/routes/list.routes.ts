@@ -61,15 +61,15 @@ listRouter.post(
 listRouter.put("/list/update/:id", authenticate, requireListOwner(), ListController.updateListById);
 
 // ADD LIKE TO A LIST BY ID AND USER ID
-listRouter.put("/list/:listId/like/:userId", authenticate, requireSelf("userId"), ListController.addLikeToList);
+listRouter.put("/list/:listId/like/:userId", authenticate, requireSelf("userId"), allowListRead("listId"), ListController.addLikeToList);
 
 // GET USERS THAT LIKED A LIST
-listRouter.get("/list/:id/likes", ListController.getUsersThatLikedList);
+listRouter.get("/list/:id/likes", optionalAuthenticate, allowListRead(), ListController.getUsersThatLikedList);
 
 // GET USERS WITH MOST LIKES ON THEIR LISTS
 listRouter.get("/lists/getMostLiked", ListController.getMostLikedLists);
 
 // GET TOTAL LIKES
-listRouter.get("/lists/getTotalLikes", ListController.getTotalLikes);
+listRouter.get("/lists/getTotalLikes", optionalAuthenticate, ListController.getTotalLikes);
 
 export default listRouter;

@@ -20,7 +20,7 @@ userRouter.put("/update/:id", authenticate, requireSelfOrAdmin("id"), UserContro
 userRouter.get("/user/:id", optionalAuthenticate, UserController.getUser);
 
 // GET LISTS LIKED BY A USER
-userRouter.get("/user/:id/lists", UserController.getListsLikedByUser);
+userRouter.get("/user/:id/lists", optionalAuthenticate, UserController.getListsLikedByUser);
 
 // GET ALL USERS
 userRouter.get("/users/getAll", authenticate, requireAdmin, UserController.getAllUsers);
@@ -41,7 +41,7 @@ userRouter.get(
 userRouter.get("/user/:id/badges", UserController.getAllBadgesOfUser);
 
 // GET USER STATS
-userRouter.get("/user/:id/stats", UserController.getUserStats);
+userRouter.get("/user/:id/stats", optionalAuthenticate, UserController.getUserStats);
 
 // RESET USER PASSWORD
 userRouter.post("/reset-password", UserController.requestResetPassword);

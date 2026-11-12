@@ -119,6 +119,25 @@ async function run() {
     assert.equal((await request("DELETE", `/list/${listId}`, bob.token)).status, 403);
     assert.equal((await request("PUT", `/${listId}/content`, bob.token, {})).status, 403);
     assert.equal((await request("PUT", `/list/${listId}/like/${alice.id}`, bob.token)).status, 403);
+    assert.equal((await request("PUT", `/list/${listId}/like/${bob.id}`, bob.token)).status, 404);
+
+    assert.equal((await request("GET", `/list/${listId}/likes`)).status, 404);
+    assert.equal((await request("GET", `/list/${listId}/likes`, bob.token)).status, 404);
+    assert.equal((await request("GET", `/list/${listId}/likes`, alice.token)).status, 200);
+
+    await db.execute("UPDATE `list` SET likes = 11 WHERE id = ?", [listId]);
+    const publicStats = await request("GET", `/user/${alice.id}/stats`);
+    const ownerStats = await request("GET", `/user/${alice.id}/stats`, alice.token);
+    assert.equal(publicStats.status, 200);
+    assert.equal(ownerStats.status, 200);
+    assert.equal(publicStats.data.listCount, 0);
+    assert.equal(ownerStats.data.listCount, 1);
+    assert.equal(publicStats.data.likesCount, 0);
+    assert.equal(ownerStats.data.likesCount, 11);
+
+    const publicLikes = await request("GET", "/lists/getTotalLikes");
+    assert.equal(publicLikes.status, 200);
+    assert.equal(Number(publicLikes.data.total_likes || 0), 0);
 
     // Roles are resolved from MySQL, never from a forged JWT claim or register body.
     await db.execute("UPDATE `user` SET role = 'admin' WHERE id = ?", [alice.id]);
@@ -150,6 +169,13 @@ async function run() {
     assert.equal(notified.status, 200);
     assertPublicResponse(notified.data);
     assert.equal((await request("GET", `/list/getById/${listId}/user/0`, alice.token)).status, 200);
+    assert.equal((await request("GET", `/list/${listId}/likes`, alice.token)).status, 200);
+    const adminLikes = await request("GET", "/lists/getTotalLikes", alice.token);
+    assert.equal(adminLikes.status, 200);
+    assert.equal(Number(adminLikes.data.total_likes), 11);
+    const adminStats = await request("GET", `/user/${alice.id}/stats`, alice.token);
+    assert.equal(adminStats.status, 200);
+    assert.equal(adminStats.data.listCount, 1);
     const badgeResult = await request("POST", "/badge", alice.token, {
       name: "CI badge",
       name_en: "CI badge",
