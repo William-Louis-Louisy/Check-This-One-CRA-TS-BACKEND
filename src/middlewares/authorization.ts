@@ -1,4 +1,4 @@
-import { NextFunction, Request, RequestHandler, Response } from "express";
+import { Request, RequestHandler } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { dataSource } from "../app";
 import { List } from "../models/list.model";
@@ -25,7 +25,7 @@ const getToken = (req: Request): string | undefined => {
     const match = /^Bearer\s+(\S+)$/i.exec(authorization);
     return match?.[1];
   }
-  return req.cookies?.jwt;
+  return undefined;
 };
 
 const resolvePrincipal = async (
@@ -100,6 +100,16 @@ const parseId = (value: string): number | undefined => {
 };
 
 export const requireSelf = (param = "id"): RequestHandler => (req, res, next) => {
+  if (!req.auth) return res.status(401).json({ message: "Authentication required" });
+  const userId = parseId(req.params[param]);
+  if (!userId) return res.status(400).json({ message: "Invalid user ID" });
+  if (req.auth.userId !== userId) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  next();
+};
+
+export const requireSelfOrAdmin = (param = "id"): RequestHandler => (req, res, next) => {
   if (!req.auth) return res.status(401).json({ message: "Authentication required" });
   const userId = parseId(req.params[param]);
   if (!userId) return res.status(400).json({ message: "Invalid user ID" });

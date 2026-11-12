@@ -3,14 +3,14 @@
 ## Access policy
 
 - Public: registration, login, password reset, public media catalogues, public lists and badges.
-- Authenticated: editing one's own profile, creating a list, liking on one's own behalf, marking content seen on one's own behalf, accessing own notifications.
+- Authenticated: editing one's own profile, creating a list, liking on one's own behalf, marking content seen on one's own behalf, accessing own notifications. Admin may edit user profiles but cannot like/mark content or read notifications on someone else's behalf.
 - List owner (or admin): editing/deleting a list, adding/removing its content.
 - Admin: all-users listing, internal all-lists listing, badge creation/update/deletion, global badge verification, deleting a shared content entity.
 - Private lists: owner/admin only. The compatibility route `/list/getById/:id/user/:userId` ignores `:userId` for authorization.
 
 ## JWT
 
-The middleware accepts an `Authorization: Bearer <jwt>` header and, for compatibility, the existing `jwt` cookie. It verifies signature/expiry and resolves the user and role from MySQL for every authorized request. Never trust the role sent by the client.
+The middleware accepts an `Authorization: Bearer <jwt>` header only (not cookies), to avoid relying on browser third-party cookies or introducing CSRF on protected mutations. It verifies signature/expiry and resolves the user and role from MySQL for every authorized request. Never trust the role sent by the client.
 
 ## Database / deployment
 
@@ -32,7 +32,7 @@ The frontend CTO-01 branch must be deployed with the API changes. It sends JWTs 
 
 ## Checks
 
-- `npm install`, then `npm run test:security`.
+- `npm ci`, then `npm run test:security` (uses the existing TypeScript dependency, no new lockfile changes).
 - Verify 401 for unauthenticated mutations, 403 for mutations against another user's resources, 404 for unauthorized private-list reads, and 403 for non-admin badge actions.
 - Verify login → profile update → list edit → logout with the corresponding frontend branch.
 - CTO-02 (DTOs and data minimization) and CTO-03 (session/cookie hardening) remain separate blockers.

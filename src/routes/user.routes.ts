@@ -1,5 +1,5 @@
 import UserController from "../controllers/user.controller";
-import { authenticate, optionalAuthenticate, requireAdmin, requireSelf } from "../middlewares/authorization";
+import { authenticate, optionalAuthenticate, requireAdmin, requireSelfOrAdmin } from "../middlewares/authorization";
 
 const express = require("express");
 const userRouter = express.Router();
@@ -14,7 +14,7 @@ userRouter.post("/login", UserController.loginUser);
 userRouter.get("/logout", UserController.logoutUser);
 
 // UPDATE A USER BY ID
-userRouter.put("/update/:id", authenticate, requireSelf("id"), UserController.updateUser);
+userRouter.put("/update/:id", authenticate, requireSelfOrAdmin("id"), UserController.updateUser);
 
 // GET A USER BY ID
 userRouter.get("/user/:id", optionalAuthenticate, UserController.getUser);
