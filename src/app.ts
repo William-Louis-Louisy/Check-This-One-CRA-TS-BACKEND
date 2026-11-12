@@ -1,11 +1,10 @@
 import cors from "cors";
 import express from "express";
-import { DataSource } from "typeorm";
-import { join } from "path";
 import { getAllowedOrigins } from "./config/cors";
 import cookieParser from "cookie-parser";
-import "reflect-metadata";
 import { setupRoutes } from "./routes";
+import { dataSource } from "./database/data-source";
+export { dataSource } from "./database/data-source";
 import cron from "node-cron";
 import { deleteOldNotifications } from "./services/notification.services";
 import { checkAllBadgesForAllUsers } from "./services/badge.services";
@@ -13,19 +12,6 @@ require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 5000;
-
-// DATASOURCE INSTANCE
-export const dataSource = new DataSource({
-  type: "mysql",
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT, 10),
-  username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  entities: [join(__dirname, "./models/*.model{.ts,.js}")],
-  // Schema changes must never be implicit in production.
-  synchronize: process.env.NODE_ENV !== "production" && process.env.DB_SYNCHRONIZE === "true",
-});
 
 app.set("x-powered-by", false);
 app.set("trust proxy", true);
