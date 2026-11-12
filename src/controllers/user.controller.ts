@@ -13,6 +13,7 @@ import {
 } from "../services/user.services";
 import { User } from "../models/user.model";
 import { List } from "../models/list.model";
+import { toAdminUser, toOwnUser, toPublicContent, toPublicUser, toList } from "../dto/api-response.dto";
 
 // CREATE TOKEN
 const maxAge = 3 * 24 * 60 * 60; // 3 days
@@ -87,7 +88,7 @@ const UserController = {
       });
 
       return res.status(200).json({
-        user: { id: user.id, user_name: user.user_name, email: user.email, role: "user" },
+        user: toOwnUser(user),
         token,
       });
     } catch (error) {
@@ -143,22 +144,21 @@ const UserController = {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // RETURN USER WITHOUT PASSWORD AND ID
+      const isOwner = req.auth?.userId === user.id;
+      const canSeeAccount = isOwner || req.auth?.role === "admin";
       return res.status(200).json({
         user: {
-          id: user.id,
-          user_name: user.user_name,
-          avatar: user.avatar,
-          country: user.country,
-          city: user.city,
-          catchline: user.catchline,
-          introduction: user.introduction,
-          email: req.auth?.userId === user.id || req.auth?.role === "admin" ? user.email : undefined,
-          role: req.auth?.userId === user.id ? user.role : undefined,
-          listsCount: userLists.length,
+          ...toPublicUser(user),
+          ...(canSeeAccount ? { email: user.email } : {}),
+          ...(isOwner ? { role: user.role } : {}),
+          listsCount: canSeeAccount ? userLists.length : publicUserLists.length,
           publicListsCount: publicUserLists.length,
-          seenContentCount: user.seen_content.length,
-          seenContent: user.seen_content,
+          ...(isOwner
+            ? {
+                seenContentCount: user.seen_content.length,
+                seenContent: user.seen_content.map(toPublicContent),
+              }
+            : {}),
         },
       });
     } catch (error) {
@@ -174,7 +174,10 @@ const UserController = {
       // Find the user matching the user mail
       const user = await dataSource
         .getRepository(User)
-        .findOne({ where: { email: email } });
+        .createQueryBuilder("user")
+        .addSelect("user.password")
+        .where("user.email = :email", { email })
+        .getOne();
       // If the user is not found, return an error
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -190,17 +193,7 @@ const UserController = {
       // Send the JWT back to the client
       res.cookie("jwt", token, { httpOnly: true });
       return res.status(200).json({
-        user: {
-          id: user.id,
-          user_name: user.user_name,
-          avatar: user.avatar,
-          country: user.country,
-          city: user.city,
-          catchline: user.catchline,
-          introduction: user.introduction,
-          email: user.email,
-          role: user.role,
-        },
+        user: toOwnUser(user),
         token,
       });
     } catch (error) {
@@ -296,18 +289,16 @@ const UserController = {
       const userRepository = dataSource.getRepository(User);
       const user = await userRepository.findOne({
         where: { id: userId },
-        relations: [
-          "liked_lists",
-          "liked_lists.content",
-          "liked_lists.content.seen_by",
-        ],
+        relations: ["liked_lists", "liked_lists.content", "liked_lists.tags", "liked_lists.liked_by"],
       });
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const lists = user.liked_lists;
+      // Public profile activity must not disclose private liked lists.
+      const canSeeAll = req.auth?.userId === userId || req.auth?.role === "admin";
+      const lists = user.liked_lists.filter((list) => canSeeAll || list.privacy === "public");
 
       // Order the lists by creation date
       const sortedLists = lists.sort((a, b) => {
@@ -327,7 +318,7 @@ const UserController = {
         paginatedLists.map(async (list) => {
           const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
           const qrCodeDataURL = await generateQRCodeDataURL(url);
-          return { ...list, qrCodeDataURL };
+          return { ...toList(list), qrCodeDataURL };
         })
       );
 
@@ -346,7 +337,7 @@ const UserController = {
       const users = await userRepository.find({
         relations: ["liked_lists", "lists"],
       });
-      return res.status(200).json({ users });
+      return res.status(200).json({ users: users.map(toAdminUser) });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
