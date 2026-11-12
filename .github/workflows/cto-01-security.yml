@@ -12,6 +12,30 @@ jobs:
   security:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_root
+          MYSQL_DATABASE: cto_security_test
+          MYSQL_USER: cto_test
+          MYSQL_PASSWORD: local_test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -plocal_test_root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: cto_test
+      DB_PASSWORD: local_test_password
+      DB_NAME: cto_security_test
+      JWT_SECRET: ci_only_secret_for_api_auth_tests_12345
+      PORT: 5000
+      NODE_ENV: test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,3 +52,20 @@ jobs:
         run: npm run test:security
       - name: TypeScript typecheck
         run: npx tsc --noEmit
+      - name: HTTP integration tests against isolated MySQL
+        run: |
+          npm run start:local > /tmp/cto-api.log 2>&1 &
+          for i in $(seq 1 45); do
+            if curl -s -o /dev/null --max-time 2 http://127.0.0.1:5000/login; then
+              break
+            fi
+            sleep 2
+          done
+          if ! curl -s -o /dev/null --max-time 2 http://127.0.0.1:5000/login; then
+            cat /tmp/cto-api.log
+            exit 1
+          fi
+          node scripts/test-authorization-http.cjs
+      - name: Print API logs on failure
+        if: failure()
+        run: cat /tmp/cto-api.log || true
