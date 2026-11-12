@@ -184,6 +184,33 @@ async function run() {
       icon: "shield",
     });
     assert.equal(badgeResult.status, 200, JSON.stringify(badgeResult));
+    // Password-reset token and expiry are select:false, but the reset flow
+    // must explicitly read them. A regular public API may never reveal them.
+    const resetToken = "fixture_reset_token_bob";
+    await db.execute(
+      "UPDATE `user` SET reset_password_token = ?, reset_password_expires = DATE_SUB(NOW(), INTERVAL 1 HOUR) WHERE id = ?",
+      [resetToken, bob.id]
+    );
+    assert.equal((await request("POST", "/reset-password/confirm", undefined, {
+      token: resetToken, password: "UpdatedPassword123!"
+    })).status, 400);
+    await db.execute(
+      "UPDATE `user` SET reset_password_expires = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE id = ?",
+      [bob.id]
+    );
+    assert.equal((await request("POST", "/reset-password/confirm", undefined, {
+      token: resetToken, password: "UpdatedPassword123!"
+    })).status, 200);
+    assert.equal((await request("POST", "/login", undefined, {
+      email: "bob@example.test", password: "UpdatedPassword123!"
+    })).status, 200);
+    const [resetRows] = await db.execute(
+      "SELECT reset_password_token, reset_password_expires FROM `user` WHERE id = ?",
+      [bob.id]
+    );
+    assert.equal(resetRows[0].reset_password_token, null);
+    assert.equal(resetRows[0].reset_password_expires, null);
+
     console.log("CTO-01/02 HTTP authorization and sensitive-field checks: OK");
   } finally {
     await db.end();
