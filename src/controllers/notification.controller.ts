@@ -42,7 +42,7 @@ const NotificationController = {
       });
 
       const notification = await notificationRepository.findOne({
-        where: { id: parseInt(notificationId) },
+        where: { id: parseInt(notificationId), user: { id: parseInt(userId) } },
       });
 
       if (!user || !notification) {

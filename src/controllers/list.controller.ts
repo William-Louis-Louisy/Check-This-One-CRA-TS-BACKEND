@@ -149,7 +149,10 @@ const listController = {
       }
 
       const lists: FindManyOptions<List> = {
-        where: { creator_id: id },
+        where:
+          req.auth?.role === "admin" || req.auth?.userId === id
+            ? { creator_id: id }
+            : { creator_id: id, privacy: "public" },
         relations: ["liked_by", "tags", "content", "content.seen_by"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
         take: paginate ? limit : undefined,
@@ -188,18 +191,22 @@ const listController = {
   getListById: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = parseInt(req.params.userId);
+      const userId = req.auth?.userId;
 
-      const user = await dataSource.getRepository(User).findOne({
-        where: { id: userId },
-        relations: ["liked_lists", "seen_content"],
-      });
+      const user = userId
+        ? await dataSource.getRepository(User).findOne({
+            where: { id: userId },
+            relations: ["liked_lists", "seen_content"],
+          })
+        : null;
 
       const list = await dataSource.getRepository(List).findOne({
         where: { id: id },
         relations: ["liked_by", "tags", "content", "content.seen_by"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
+
+      if (!list) return res.status(404).json({ message: "List not found" });
 
       // Generate qrcode for the list
       const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
@@ -336,7 +343,7 @@ const listController = {
     try {
       const providerId = parseInt(req.params.id);
       const lists = await dataSource.getRepository(List).find({
-        where: { content: { provider_id: providerId } },
+        where: { content: { provider_id: providerId }, privacy: "public" },
         relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
@@ -355,7 +362,7 @@ const listController = {
     try {
       const providerId = parseInt(req.params.id);
       const lists = await dataSource.getRepository(List).find({
-        where: { content: { provider_id: providerId } },
+        where: { content: { provider_id: providerId }, privacy: "public" },
       });
       return res.status(200).json({ count: lists.length });
     } catch (error) {

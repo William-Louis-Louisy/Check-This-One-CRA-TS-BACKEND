@@ -1,4 +1,5 @@
 import UserController from "../controllers/user.controller";
+import { authenticate, optionalAuthenticate, requireAdmin, requireSelf } from "../middlewares/authorization";
 
 const express = require("express");
 const userRouter = express.Router();
@@ -13,16 +14,16 @@ userRouter.post("/login", UserController.loginUser);
 userRouter.get("/logout", UserController.logoutUser);
 
 // UPDATE A USER BY ID
-userRouter.put("/update/:id", UserController.updateUser);
+userRouter.put("/update/:id", authenticate, requireSelf("id"), UserController.updateUser);
 
 // GET A USER BY ID
-userRouter.get("/user/:id", UserController.getUser);
+userRouter.get("/user/:id", optionalAuthenticate, UserController.getUser);
 
 // GET LISTS LIKED BY A USER
 userRouter.get("/user/:id/lists", UserController.getListsLikedByUser);
 
 // GET ALL USERS
-userRouter.get("/users/getAll", UserController.getAllUsers);
+userRouter.get("/users/getAll", authenticate, requireAdmin, UserController.getAllUsers);
 
 // CHECK USERNAME AVAILABILITY
 userRouter.get(

@@ -8,6 +8,7 @@ import {
   JoinTable,
 } from "typeorm";
 import bcrypt from "bcrypt";
+import { UserRole } from "../middlewares/authorization.policy";
 import { List } from "./list.model";
 import { Content } from "./content.model";
 import { UnlockedBadge } from "./unlockedBadge.model";
@@ -29,6 +30,9 @@ export class User {
 
   @Column({ nullable: false, name: "password" })
   password: string;
+
+  @Column({ type: "varchar", length: 16, default: "user" })
+  role: UserRole;
 
   @Column({ type: "longtext", nullable: true, name: "avatar" })
   avatar: string;
