@@ -2,7 +2,7 @@ name: CTO-01 Security Checks
 
 on:
   pull_request:
-    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos]
+    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos, security/cto-04-private-list-audit]
   workflow_dispatch:
 
 permissions:

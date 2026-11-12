@@ -4,9 +4,6 @@ import { dataSource } from "../app";
 import { NextFunction, Request, Response } from "express";
 import {
   createUserService,
-  getListCountByUser,
-  getListCountByUserAndType,
-  getTotalLikesByUser,
   sendResetPasswordEmail,
   setResetPasswordToken,
   verifyResetPasswordToken,
@@ -429,24 +426,24 @@ const UserController = {
       // Get user id from request
       const userId = parseInt(req.params.id);
 
-      // Get list count
-      const listCount = await getListCountByUser(userId);
+      // Avoid leaking private-list activity through public statistics.
+      const canSeePrivate =
+        req.auth?.userId === userId || req.auth?.role === "admin";
+      const lists = await dataSource.getRepository(List).find({
+        where: canSeePrivate
+          ? { creator_id: userId }
+          : { creator_id: userId, privacy: "public" },
+      });
 
-      // Get list count by category
-      const moviesListCount = await getListCountByUserAndType(userId, "movie");
-      const showsListCount = await getListCountByUserAndType(userId, "show");
-      const podcastsListCount = await getListCountByUserAndType(
-        userId,
-        "podcast"
-      );
-      const youtubesListCount = await getListCountByUserAndType(
-        userId,
-        "youtube"
-      );
-      const mixedListCount = await getListCountByUserAndType(userId, "mixed");
-
-      // Get likes count
-      const likesCount = await getTotalLikesByUser(userId);
+      const listCount = lists.length;
+      const countType = (type: string): number =>
+        lists.filter((list) => list.type === type).length;
+      const moviesListCount = countType("movie");
+      const showsListCount = countType("show");
+      const podcastsListCount = countType("podcast");
+      const youtubesListCount = countType("youtube");
+      const mixedListCount = countType("mixed");
+      const likesCount = lists.reduce((total, list) => total + list.likes, 0);
 
       return res.status(200).json({
         listCount,

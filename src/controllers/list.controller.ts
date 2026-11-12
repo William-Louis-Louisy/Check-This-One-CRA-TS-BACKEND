@@ -584,11 +584,14 @@ const listController = {
   // GET TOTAL LIKES
   getTotalLikes: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const query = await dataSource
+      const queryBuilder = dataSource
         .createQueryBuilder()
         .select(["SUM(lists.likes) as total_likes"])
-        .from(List, "lists")
-        .getRawOne();
+        .from(List, "lists");
+      if (req.auth?.role !== "admin") {
+        queryBuilder.where("lists.privacy = :privacy", { privacy: "public" });
+      }
+      const query = await queryBuilder.getRawOne();
 
       return res.status(200).json(query);
     } catch (error) {
