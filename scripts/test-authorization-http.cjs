@@ -118,6 +118,11 @@ async function run() {
     assert.equal(session.status, 200);
     assert.equal(session.data.user.id, alice.id);
     assert.equal(session.data.token, undefined);
+    // Session identity and CSRF responses must not be stored by intermediaries.
+    const rawSession = await fetch(BASE + "/session", {
+      headers: { Cookie: alice.token },
+    });
+    assert.match(rawSession.headers.get("cache-control") || "", /no-store/);
     assert.match(session.data.csrfToken, /^[a-f0-9]{64}$/);
 
     assert.equal((await request("PUT", `/update/${alice.id}`, alice.token, {},
@@ -143,6 +148,11 @@ async function run() {
     assert.equal(publicAlice.data.user.seenContent, undefined);
     assert.equal(publicAlice.data.user.seenContentCount, undefined);
 
+    // A correctly signed JWT sent as Bearer must NOT authenticate:
+    // only the HttpOnly cookie is accepted after CTO-03b.
+    assert.equal((await request("GET", "/session", undefined, undefined, {
+      headers: { Authorization: "Bearer " + alice.token.slice("cto_session=".length) }
+    })).status, 401);
     const ownAlice = await request("GET", `/user/${alice.id}`, alice.token);
     assert.equal(ownAlice.status, 200);
     assertPublicResponse(ownAlice.data);

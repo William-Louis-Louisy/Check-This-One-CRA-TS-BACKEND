@@ -73,6 +73,8 @@ export const authenticate: RequestHandler = async (req, res, next) => {
       return res.status(403).json({ message: "Invalid CSRF token" });
     }
     req.auth = auth;
+    // Authenticated responses must not be cached by a same-origin proxy/CDN.
+    res.setHeader("Cache-Control", "private, no-store");
     next();
   } catch (error) {
     next(error);
@@ -83,6 +85,8 @@ export const authenticate: RequestHandler = async (req, res, next) => {
 export const optionalAuthenticate: RequestHandler = async (req, res, next) => {
   try {
     req.auth = await resolvePrincipal(req);
+    // Public routes with owner-specific responses must not be cached either.
+    res.setHeader("Cache-Control", "private, no-store");
     next();
   } catch (error) {
     next(error);
