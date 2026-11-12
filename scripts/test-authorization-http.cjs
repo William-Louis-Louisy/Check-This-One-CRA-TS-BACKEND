@@ -184,6 +184,18 @@ async function run() {
       icon: "shield",
     });
     assert.equal(badgeResult.status, 200, JSON.stringify(badgeResult));
+    // Server-side logout invalidates signed JWTs, not merely the UI session.
+    assert.equal((await request("POST", "/logout")).status, 401);
+    assert.equal((await request("POST", "/logout", alice.token)).status, 200);
+    assert.equal((await request("GET", "/users/getAll", alice.token)).status, 401);
+    assert.equal((await request("POST", "/logout", alice.token)).status, 401);
+    const relogin = await request("POST", "/login", undefined, {
+      email: "alice@example.test",
+      password,
+    });
+    assert.equal(relogin.status, 200, JSON.stringify(relogin));
+    assert.notEqual(relogin.data.token, alice.token);
+    assert.equal((await request("GET", "/users/getAll", relogin.data.token)).status, 200);
     // Password-reset token and expiry are select:false, but the reset flow
     // must explicitly read them. A regular public API may never reveal them.
     const resetToken = "fixture_reset_token_bob";
@@ -210,8 +222,20 @@ async function run() {
     );
     assert.equal(resetRows[0].reset_password_token, null);
     assert.equal(resetRows[0].reset_password_expires, null);
+    assert.equal(
+      (await request("GET", `/user/${bob.id}/notifications/unseen`, bob.token)).status,
+      401,
+      "Password reset must invalidate existing JWTs"
+    );
+    assert.equal(
+      (await request("POST", "/reset-password/confirm", undefined, {
+        token: resetToken, password: "UpdatedPassword123!"
+      })).status,
+      400,
+      "Reset token must not be reusable"
+    );
 
-    console.log("CTO-01/02 HTTP authorization and sensitive-field checks: OK");
+    console.log("CTO-01/02/03a/04 HTTP authorization, privacy and revocation checks: OK");
   } finally {
     await db.end();
   }

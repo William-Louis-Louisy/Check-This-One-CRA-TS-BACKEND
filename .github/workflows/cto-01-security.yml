@@ -2,7 +2,7 @@ name: CTO-01 Security Checks
 
 on:
   pull_request:
-    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos, security/cto-04-private-list-audit]
+    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos, security/cto-04-private-list-audit, security/cto-03a-session-revocation]
   workflow_dispatch:
 
 permissions:
@@ -110,4 +110,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Dry-run, guarded migration and verified administrator tests
-        run: node scripts/test-role-migration.cjs
+        run: |
+          node scripts/test-role-migration.cjs
+          node scripts/test-session-migration.cjs

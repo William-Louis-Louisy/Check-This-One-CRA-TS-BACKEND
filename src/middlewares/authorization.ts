@@ -58,6 +58,11 @@ const resolvePrincipal = async (
   });
   if (!user) return undefined;
 
+  // A signed but revoked JWT must never authenticate again.
+  if (typeof decoded.sv !== "number" || decoded.sv !== user.session_version) {
+    return undefined;
+  }
+
   return {
     userId: user.id,
     role: user.role === "admin" ? "admin" : "user",

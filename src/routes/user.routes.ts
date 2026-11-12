@@ -11,7 +11,7 @@ userRouter.post("/register", UserController.createUser);
 userRouter.post("/login", UserController.loginUser);
 
 // LOGOUT USER
-userRouter.get("/logout", UserController.logoutUser);
+userRouter.post("/logout", authenticate, UserController.logoutUser);
 
 // UPDATE A USER BY ID
 userRouter.put("/update/:id", authenticate, requireSelfOrAdmin("id"), UserController.updateUser);

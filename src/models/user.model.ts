@@ -34,6 +34,10 @@ export class User {
   @Column({ type: "varchar", length: 16, default: "user" })
   role: UserRole;
 
+  // A logout invalidates every previously issued JWT for this account.
+  @Column({ type: "int", unsigned: true, default: 0 })
+  session_version: number;
+
   @Column({ type: "longtext", nullable: true, name: "avatar" })
   avatar: string;
 
