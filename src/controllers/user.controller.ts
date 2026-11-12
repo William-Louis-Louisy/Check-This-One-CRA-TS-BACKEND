@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
 import { clearSessionCookie, csrfTokenForSession, getSessionJwt, setSessionCookie } from "../middlewares/session";
 import { dataSource } from "../app";
 import { NextFunction, Request, Response } from "express";
@@ -17,7 +18,7 @@ import { toAdminUser, toOwnUser, toPublicContent, toPublicUser, toList } from ".
 const maxAge = 3 * 24 * 60 * 60; // 3 days
 const createToken = (user: User) => {
   return jwt.sign(
-    { id: user.id, user_name: user.user_name, sv: user.session_version ?? 0 },
+    { id: user.id, user_name: user.user_name, sv: user.session_version ?? 0, jti: randomUUID() },
     process.env.JWT_SECRET as string,
     { expiresIn: maxAge }
   );
