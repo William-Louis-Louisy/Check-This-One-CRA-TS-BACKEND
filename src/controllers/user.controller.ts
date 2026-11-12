@@ -86,7 +86,10 @@ const UserController = {
         domain: ".localhost",
       });
 
-      return res.status(200).json({ user, token });
+      return res.status(200).json({
+        user: { id: user.id, user_name: user.user_name, email: user.email, role: "user" },
+        token,
+      });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -150,7 +153,8 @@ const UserController = {
           city: user.city,
           catchline: user.catchline,
           introduction: user.introduction,
-          email: user.email,
+          email: req.auth?.userId === user.id || req.auth?.role === "admin" ? user.email : undefined,
+          role: req.auth?.userId === user.id ? user.role : undefined,
           listsCount: userLists.length,
           publicListsCount: publicUserLists.length,
           seenContentCount: user.seen_content.length,
@@ -185,7 +189,6 @@ const UserController = {
       const token = createToken(user.id, user.user_name);
       // Send the JWT back to the client
       res.cookie("jwt", token, { httpOnly: true });
-      res.cookie("user", user, { httpOnly: true });
       return res.status(200).json({
         user: {
           id: user.id,
@@ -196,6 +199,7 @@ const UserController = {
           catchline: user.catchline,
           introduction: user.introduction,
           email: user.email,
+          role: user.role,
         },
         token,
       });
