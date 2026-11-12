@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { DataSource } from "typeorm";
 import { join } from "path";
+import { getAllowedOrigins } from "./config/cors";
 import cookieParser from "cookie-parser";
 import "reflect-metadata";
 import { setupRoutes } from "./routes";
@@ -22,7 +23,8 @@ export const dataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   entities: [join(__dirname, "./models/*.model{.ts,.js}")],
-  synchronize: true,
+  // Schema changes must never be implicit in production.
+  synchronize: process.env.NODE_ENV !== "production" && process.env.DB_SYNCHRONIZE === "true",
 });
 
 app.set("x-powered-by", false);
@@ -30,23 +32,14 @@ app.set("trust proxy", true);
 app.enable("trust proxy");
 
 // MIDDLEWARE
+const allowedOrigins = getAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
 app.use(
   cors({
-    origin: [
-      "*",
-      "localhost:3000",
-      "http://localhost:3000",
-      "212.227.70.139",
-      "https://checkthisone.vercel.app",
-      "checkthisone.vercel.app",
-    ],
+    origin: (origin, callback) =>
+      callback(null, !origin || allowedOrigins.has(origin)),
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "Access-Control-Allow-Origin",
-    ],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(express.json({ limit: "50mb" }));
