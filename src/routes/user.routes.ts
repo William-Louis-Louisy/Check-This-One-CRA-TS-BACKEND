@@ -13,6 +13,9 @@ userRouter.post("/login", UserController.loginUser);
 // LOGOUT USER
 userRouter.post("/logout", authenticate, UserController.logoutUser);
 
+// RESTORE AUTHENTICATED SESSION
+userRouter.get("/session", authenticate, UserController.getSession);
+
 // UPDATE A USER BY ID
 userRouter.put("/update/:id", authenticate, requireSelfOrAdmin("id"), UserController.updateUser);
 
