@@ -4,6 +4,7 @@ import { FindManyOptions } from "typeorm";
 import { User } from "../models/user.model";
 import { List } from "../models/list.model";
 import { Content } from "../models/content.model";
+import { toList, toPublicContent, toPublicUser } from "../dto/api-response.dto";
 import { NextFunction, Request, Response } from "express";
 import {
   addContentToListService,
@@ -104,7 +105,7 @@ const listController = {
         relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
-      return res.status(200).json({ lists });
+      return res.status(200).json({ lists: lists.map(toList) });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -122,7 +123,7 @@ const listController = {
         relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
-      return res.status(200).json({ lists });
+      return res.status(200).json({ lists: lists.map(toList) });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -153,7 +154,7 @@ const listController = {
           req.auth?.role === "admin" || req.auth?.userId === id
             ? { creator_id: id }
             : { creator_id: id, privacy: "public" },
-        relations: ["liked_by", "tags", "content", "content.seen_by"],
+        relations: ["liked_by", "tags", "content"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
         take: paginate ? limit : undefined,
         skip: paginate ? (page - 1) * limit : undefined,
@@ -171,7 +172,7 @@ const listController = {
         results.map(async (list) => {
           const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
           const qrCodeDataURL = await generateQRCodeDataURL(url);
-          return { ...list, qrCodeDataURL };
+          return { ...toList(list), qrCodeDataURL };
         })
       );
 
@@ -202,7 +203,7 @@ const listController = {
 
       const list = await dataSource.getRepository(List).findOne({
         where: { id: id },
-        relations: ["liked_by", "tags", "content", "content.seen_by"],
+        relations: ["liked_by", "tags", "content"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
 
@@ -216,7 +217,7 @@ const listController = {
         ? calculateCompletionPercentage(list, user)
         : undefined;
 
-      const listWithQRCodes = { ...list, qrCodeDataURL, completionPercentage };
+      const listWithQRCodes = { ...toList(list), qrCodeDataURL, completionPercentage };
 
       return res.status(200).json({ list: listWithQRCodes });
     } catch (error) {
@@ -256,7 +257,8 @@ const listController = {
       const list = await dataSource
         .getRepository(List)
         .findOne({ where: { id: id } });
-      return res.status(200).json({ content: list.content });
+      if (!list) return res.status(404).json({ message: "List not found" });
+      return res.status(200).json({ content: list.content.map(toPublicContent) });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -347,7 +349,7 @@ const listController = {
         relations: ["liked_by", "tags"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
-      return res.status(200).json({ lists });
+      return res.status(200).json({ lists: lists.map(toList) });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -385,7 +387,7 @@ const listController = {
       const listRepository = dataSource.getRepository(List);
       const lists = await listRepository.find({
         where: { privacy: "public" },
-        relations: ["liked_by", "tags", "content", "content.seen_by"],
+        relations: ["liked_by", "tags", "content"],
         select: {
           liked_by: { id: true, user_name: true, avatar: true },
         },
@@ -434,7 +436,7 @@ const listController = {
         paginatedLists.map(async (list) => {
           const url = `https://checkthisone.vercel.app/listDetails/${list.id}`;
           const qrCodeDataURL = await generateQRCodeDataURL(url);
-          return { ...list, qrCodeDataURL };
+          return { ...toList(list), qrCodeDataURL };
         })
       );
 
@@ -544,7 +546,7 @@ const listController = {
         relations: ["liked_by"],
         select: { liked_by: { id: true, user_name: true, avatar: true } },
       });
-      return res.status(200).json({ users: list.liked_by });
+      return res.status(200).json({ users: list.liked_by.map(toPublicUser) });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }

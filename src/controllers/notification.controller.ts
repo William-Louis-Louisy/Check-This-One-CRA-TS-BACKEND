@@ -2,6 +2,7 @@ import { dataSource } from "../app";
 import { User } from "../models/user.model";
 import { NextFunction, Request, Response } from "express";
 import { Notification } from "../models/notification.model";
+import { toNotification } from "../dto/api-response.dto";
 
 const NotificationController = {
   // GET UNSEEN NOTIFICATIONS
@@ -18,7 +19,7 @@ const NotificationController = {
         where: { user: { id: parseInt(userId) }, seen: false },
       });
 
-      return res.status(200).json({ notifications: unseenNotifications });
+      return res.status(200).json({ notifications: unseenNotifications.map(toNotification) });
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }

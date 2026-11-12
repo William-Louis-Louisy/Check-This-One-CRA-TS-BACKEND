@@ -28,7 +28,7 @@ export class User {
   @Column({ nullable: false, name: "email", unique: true })
   email: string;
 
-  @Column({ nullable: false, name: "password" })
+  @Column({ nullable: false, name: "password", select: false })
   password: string;
 
   @Column({ type: "varchar", length: 16, default: "user" })
@@ -66,10 +66,10 @@ export class User {
   @OneToMany(() => Notification, (notification) => notification.user)
   notifications: Notification[];
 
-  @Column({ name: "reset_password_token", nullable: true })
+  @Column({ name: "reset_password_token", nullable: true, select: false })
   reset_password_token: string;
 
-  @Column({ name: "reset_password_expires", nullable: true })
+  @Column({ name: "reset_password_expires", nullable: true, select: false })
   reset_password_expires: Date;
 
   @BeforeInsert()
