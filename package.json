@@ -8,7 +8,8 @@
     "start:local": "ts-node-dev src/app.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:security": "node scripts/test-authorization.cjs",
-    "db:cto01": "node scripts/migrate-cto01-role.cjs"
+    "db:cto01": "node scripts/migrate-cto01-role.cjs",
+    "db:cto03": "node scripts/migrate-cto03-session.cjs"
   },
   "author": "",
   "license": "ISC",

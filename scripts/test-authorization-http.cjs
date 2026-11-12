@@ -184,7 +184,19 @@ async function run() {
       icon: "shield",
     });
     assert.equal(badgeResult.status, 200, JSON.stringify(badgeResult));
-    console.log("CTO-01/02 HTTP authorization and sensitive-field checks: OK");
+    // Server-side logout invalidates signed JWTs, not merely the UI session.
+    assert.equal((await request("POST", "/logout")).status, 401);
+    assert.equal((await request("POST", "/logout", alice.token)).status, 200);
+    assert.equal((await request("GET", "/users/getAll", alice.token)).status, 401);
+    assert.equal((await request("POST", "/logout", alice.token)).status, 401);
+    const relogin = await request("POST", "/login", undefined, {
+      email: "alice@example.test",
+      password,
+    });
+    assert.equal(relogin.status, 200, JSON.stringify(relogin));
+    assert.notEqual(relogin.data.token, alice.token);
+    assert.equal((await request("GET", "/users/getAll", relogin.data.token)).status, 200);
+    console.log("CTO-01/02/03a/04 HTTP authorization, privacy and revocation checks: OK");
   } finally {
     await db.end();
   }
