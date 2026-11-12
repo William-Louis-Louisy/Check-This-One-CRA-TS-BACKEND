@@ -88,7 +88,7 @@ const UserController = {
       });
 
       return res.status(200).json({
-        user: toOwnUser(user),
+        user: { ...toOwnUser(user), role: "user" },
         token,
       });
     } catch (error) {
