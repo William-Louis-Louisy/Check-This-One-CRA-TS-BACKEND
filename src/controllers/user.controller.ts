@@ -259,12 +259,30 @@ const UserController = {
         return res.status(400).json({ message: "Invalid token" });
       }
 
-      // Set the new password for the user
-      user.password = await bcrypt.hash(password, 10);
-      user.reset_password_token = null;
-      user.reset_password_expires = null;
+      if (!passwordRegex.test(password)) {
+        return res.status(400).json({ message: "Invalid password format" });
+      }
 
-      await dataSource.getRepository(User).save(user);
+      const passwordHash = await bcrypt.hash(password, 10);
+      // One atomic UPDATE prevents reusing a reset link and invalidates
+      // previously issued access tokens on all devices.
+      const result = await dataSource
+        .createQueryBuilder()
+        .update(User)
+        .set({
+          password: passwordHash,
+          reset_password_token: null,
+          reset_password_expires: null,
+          session_version: () => "session_version + 1",
+        })
+        .where(
+          "id = :userId AND reset_password_token = :token AND reset_password_expires > NOW()",
+          { userId: user.id, token }
+        )
+        .execute();
+      if (result.affected !== 1) {
+        return res.status(400).json({ message: "Invalid token" });
+      }
 
       return res.status(200).json({ message: "Password reset successful" });
     } catch (error) {

@@ -222,6 +222,18 @@ async function run() {
     );
     assert.equal(resetRows[0].reset_password_token, null);
     assert.equal(resetRows[0].reset_password_expires, null);
+    assert.equal(
+      (await request("GET", `/user/${bob.id}/notifications/unseen`, bob.token)).status,
+      401,
+      "Password reset must invalidate existing JWTs"
+    );
+    assert.equal(
+      (await request("POST", "/reset-password/confirm", undefined, {
+        token: resetToken, password: "UpdatedPassword123!"
+      })).status,
+      400,
+      "Reset token must not be reusable"
+    );
 
     console.log("CTO-01/02/03a/04 HTTP authorization, privacy and revocation checks: OK");
   } finally {
