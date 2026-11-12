@@ -50,10 +50,10 @@ async function main() {
     const [[active]] = await dataSource.query("SELECT DATABASE() AS name");
     if (active.name !== name) throw new Error("Connected to the wrong database");
 
-    const [tables] = await dataSource.query(
+    const tables = await dataSource.query(
       "SELECT TABLE_NAME FROM information_schema.TABLES " +
       "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('user', 'cto_schema_migrations')"
-    ).then(rows => [rows]);
+    );
     if (!tables.some(table => table.TABLE_NAME === "user")) {
       throw new Error("Existing application schema required; baseline is missing");
     }
