@@ -43,6 +43,25 @@ async function run() {
   });
 
   try {
+    // Browser preflight: exact preview origin allowed, arbitrary origins denied.
+    const preflightHeaders = {
+      "Access-Control-Request-Method": "GET",
+      "Access-Control-Request-Headers": "authorization",
+    };
+    const trusted = await fetch(BASE + "/users/getAll", {
+      method: "OPTIONS",
+      headers: { ...preflightHeaders, Origin: "https://cto01-preview.example.test" },
+    });
+    assert.equal(trusted.status, 204);
+    assert.equal(trusted.headers.get("access-control-allow-origin"), "https://cto01-preview.example.test");
+    assert.equal(trusted.headers.get("access-control-allow-credentials"), "true");
+
+    const blocked = await fetch(BASE + "/users/getAll", {
+      method: "OPTIONS",
+      headers: { ...preflightHeaders, Origin: "https://untrusted.example.test" },
+    });
+    assert.equal(blocked.headers.get("access-control-allow-origin"), null);
+
     assert.equal((await request("GET", "/users/getAll")).status, 401);
     assert.equal((await request("POST", "/badge", undefined, {})).status, 401);
 

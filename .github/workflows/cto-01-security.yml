@@ -36,6 +36,8 @@ jobs:
       JWT_SECRET: ci_only_secret_for_api_auth_tests_12345
       PORT: 5000
       NODE_ENV: test
+      DB_SYNCHRONIZE: "true"
+      CORS_ALLOWED_ORIGINS: https://cto01-preview.example.test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,3 +71,43 @@ jobs:
       - name: Print API logs on failure
         if: failure()
         run: cat /tmp/cto-api.log || true
+
+  migration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_root
+          MYSQL_DATABASE: cto_security_test
+          MYSQL_USER: cto_test
+          MYSQL_PASSWORD: local_test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -plocal_test_root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: cto_test
+      DB_PASSWORD: local_test_password
+      DB_NAME: cto_security_test
+      NODE_ENV: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Dry-run, guarded migration and verified administrator tests
+        run: node scripts/test-role-migration.cjs
