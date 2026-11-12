@@ -106,6 +106,9 @@ async function run() {
       headers: { Authorization: "Bearer invalid.token" }
     })).status, 401);
     assert.equal((await request("POST", "/badge", undefined, {})).status, 401);
+    assert.equal((await request("GET", "/check-badges")).status, 404,
+      "Badge verification must never be a GET");
+    assert.equal((await request("POST", "/check-badges")).status, 401);
 
     const alice = await register("test_alice", "alice@example.test", { role: "admin" });
     const bob = await register("test_bobby", "bob@example.test");
@@ -243,6 +246,8 @@ async function run() {
       icon: "shield",
     });
     assert.equal(badgeResult.status, 200, JSON.stringify(badgeResult));
+    assert.equal((await request("POST", "/check-badges", alice.token, undefined,
+      { skipCsrf: true })).status, 403);
     // Server-side logout invalidates signed JWTs, not merely the UI session.
     assert.equal((await request("POST", "/logout")).status, 401);
     assert.equal((await request("POST", "/logout", alice.token)).status, 200);
