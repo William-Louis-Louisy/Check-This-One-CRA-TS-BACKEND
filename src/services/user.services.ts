@@ -159,9 +159,15 @@ export const sendResetPasswordEmail = async (
 
 export const verifyResetPasswordToken = async (token: string) => {
   try {
+    // These fields are hidden from ordinary queries by select:false.
+    // Explicitly select them only inside the reset-token verification flow.
     const user = await dataSource
       .getRepository(User)
-      .findOne({ where: { reset_password_token: token } });
+      .createQueryBuilder("user")
+      .addSelect("user.reset_password_token")
+      .addSelect("user.reset_password_expires")
+      .where("user.reset_password_token = :token", { token })
+      .getOne();
 
     if (!user) {
       return null;
