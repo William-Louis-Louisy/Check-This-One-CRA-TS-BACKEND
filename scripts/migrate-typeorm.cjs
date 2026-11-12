@@ -47,7 +47,7 @@ async function main() {
 
   await dataSource.initialize();
   try {
-    const [[active]] = await dataSource.query("SELECT DATABASE() AS name");
+    const [active] = await dataSource.query("SELECT DATABASE() AS name");
     if (active.name !== name) throw new Error("Connected to the wrong database");
 
     const tables = await dataSource.query(
