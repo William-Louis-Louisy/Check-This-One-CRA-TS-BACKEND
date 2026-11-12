@@ -19,6 +19,23 @@ async function request(method, path, token, body) {
 }
 
 const password = "SecuredPwd123!";
+
+function assertPublicResponse(value, path = "$") {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertPublicResponse(entry, path + "[" + index + "]"));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+
+  for (const [key, entry] of Object.entries(value)) {
+    assert.ok(
+      !["password", "reset_password_token", "reset_password_expires", "seen_by"].includes(key),
+      "Sensitive field leaked at " + path + "." + key
+    );
+    assertPublicResponse(entry, path + "." + key);
+  }
+}
+
 async function register(name, email, extra = {}) {
   const response = await request("POST", "/register", undefined, {
     user_name: name,
@@ -68,6 +85,22 @@ async function run() {
     const alice = await register("test_alice", "alice@example.test", { role: "admin" });
     const bob = await register("test_bobby", "bob@example.test");
 
+    // Credentials must be absent even from deeply nested ORM relations.
+    const publicAlice = await request("GET", `/user/${alice.id}`);
+    assert.equal(publicAlice.status, 200);
+    assertPublicResponse(publicAlice.data);
+    assert.equal(publicAlice.data.user.email, undefined);
+    assert.equal(publicAlice.data.user.role, undefined);
+    assert.equal(publicAlice.data.user.seenContent, undefined);
+    assert.equal(publicAlice.data.user.seenContentCount, undefined);
+
+    const ownAlice = await request("GET", `/user/${alice.id}`, alice.token);
+    assert.equal(ownAlice.status, 200);
+    assertPublicResponse(ownAlice.data);
+    assert.equal(ownAlice.data.user.email, "alice@example.test");
+    assert.equal(ownAlice.data.user.role, "user");
+
+
     assert.equal((await request("GET", "/users/getAll", alice.token)).status, 403);
     assert.equal((await request("PUT", `/update/${bob.id}`, alice.token, {})).status, 403);
     assert.equal((await request("PUT", `/update/${alice.id}`, undefined, {})).status, 401);
@@ -89,7 +122,33 @@ async function run() {
 
     // Roles are resolved from MySQL, never from a forged JWT claim or register body.
     await db.execute("UPDATE `user` SET role = 'admin' WHERE id = ?", [alice.id]);
-    assert.equal((await request("GET", "/users/getAll", alice.token)).status, 200);
+    const adminUsers = await request("GET", "/users/getAll", alice.token);
+    assert.equal(adminUsers.status, 200);
+    assertPublicResponse(adminUsers.data);
+    assert.ok(Array.isArray(adminUsers.data.users[0].lists), "Admin list counts remain compatible.");
+    assert.ok(Array.isArray(adminUsers.data.users[0].liked_lists), "Admin liked-list counts remain compatible.");
+    assert.equal(adminUsers.data.users.find((user) => user.id === bob.id).email, "bob@example.test");
+
+    const publicLists = await request("GET", "/lists/getAllPublic");
+    assert.equal(publicLists.status, 200);
+    assertPublicResponse(publicLists.data);
+
+    const allLists = await request("GET", "/lists/getAll", alice.token);
+    assert.equal(allLists.status, 200);
+    assertPublicResponse(allLists.data);
+
+    const byUser = await request("GET", `/lists/getByUserId/${alice.id}`, bob.token);
+    assert.equal(byUser.status, 200);
+    assertPublicResponse(byUser.data);
+    assert.equal(byUser.data.results.some((list) => list.id === listId), false);
+
+    const ownerList = await request("GET", `/list/getById/${listId}/user/${alice.id}`, alice.token);
+    assert.equal(ownerList.status, 200);
+    assertPublicResponse(ownerList.data);
+
+    const notified = await request("GET", `/user/${alice.id}/notifications/unseen`, alice.token);
+    assert.equal(notified.status, 200);
+    assertPublicResponse(notified.data);
     assert.equal((await request("GET", `/list/getById/${listId}/user/0`, alice.token)).status, 200);
     const badgeResult = await request("POST", "/badge", alice.token, {
       name: "CI badge",
@@ -99,7 +158,7 @@ async function run() {
       icon: "shield",
     });
     assert.equal(badgeResult.status, 200, JSON.stringify(badgeResult));
-    console.log("CTO-01 HTTP integration checks: OK");
+    console.log("CTO-01/02 HTTP authorization and sensitive-field checks: OK");
   } finally {
     await db.end();
   }
