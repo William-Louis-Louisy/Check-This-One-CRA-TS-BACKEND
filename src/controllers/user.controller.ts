@@ -14,10 +14,12 @@ import { toAdminUser, toOwnUser, toPublicContent, toPublicUser, toList } from ".
 
 // CREATE TOKEN
 const maxAge = 3 * 24 * 60 * 60; // 3 days
-const createToken = (id: number, user_name: string) => {
-  return jwt.sign({ id, user_name }, process.env.JWT_SECRET as string, {
-    expiresIn: maxAge,
-  });
+const createToken = (user: User) => {
+  return jwt.sign(
+    { id: user.id, user_name: user.user_name, sv: user.session_version ?? 0 },
+    process.env.JWT_SECRET as string,
+    { expiresIn: maxAge }
+  );
 };
 
 const QRCode = require("qrcode");
@@ -76,13 +78,7 @@ const UserController = {
 
       const user = await createUserService(req.body);
       // CREATE TOKEN
-      const token = createToken(user.id, user.user_name);
-
-      res.cookie("jwt", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        domain: ".localhost",
-      });
+      const token = createToken(user);
 
       return res.status(200).json({
         user: { ...toOwnUser(user), role: "user" },
@@ -186,9 +182,8 @@ const UserController = {
         return res.status(401).json({ message: "Password is incorrect" });
       }
       // If the password matches, generate a JWT
-      const token = createToken(user.id, user.user_name);
+      const token = createToken(user);
       // Send the JWT back to the client
-      res.cookie("jwt", token, { httpOnly: true });
       return res.status(200).json({
         user: toOwnUser(user),
         token,
@@ -200,10 +195,26 @@ const UserController = {
 
   // LOGOUT USER
   logoutUser: async (req: Request, res: Response, next: NextFunction) => {
-    return res
-      .clearCookie("access_token", { domain: ".localhost" })
-      .status(200)
-      .json({ status: 200, message: "Logout successful" });
+    try {
+      if (!req.auth) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      // Atomic increment invalidates JWTs issued with an older sv claim.
+      const result = await dataSource
+        .getRepository(User)
+        .increment({ id: req.auth.userId }, "session_version", 1);
+
+      if (result.affected !== 1) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      return res
+        .clearCookie("jwt", { path: "/" })
+        .status(200)
+        .json({ status: 200, message: "Logout successful" });
+    } catch (error) {
+      return res.status(500).json({ message: "Unable to invalidate session" });
+    }
   },
 
   // REQUEST RESET PASSWORD
