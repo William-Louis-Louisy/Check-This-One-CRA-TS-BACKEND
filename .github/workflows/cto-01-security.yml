@@ -117,3 +117,4 @@ jobs:
         run: |
           npm run build
           node scripts/test-typeorm-migrations.cjs
+          node scripts/test-cookie-attributes.cjs

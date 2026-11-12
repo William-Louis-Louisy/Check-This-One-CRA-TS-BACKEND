@@ -63,6 +63,9 @@ async function register(name, email, extra = {}) {
   assert.ok(login.cookie?.startsWith("cto_session="));
   assert.ok(login.setCookie.includes("HttpOnly"));
   assert.ok(login.setCookie.includes("SameSite=Lax"));
+  assert.ok(login.setCookie.includes("Path=/"));
+  assert.ok(!login.setCookie.includes("Domain="));
+  assert.ok(!login.setCookie.includes("SameSite=None"));
   assert.equal(login.data.token, undefined);
   assert.match(login.data.csrfToken, /^[a-f0-9]{64}$/);
   return { token: login.cookie, id: response.data.user.id };
