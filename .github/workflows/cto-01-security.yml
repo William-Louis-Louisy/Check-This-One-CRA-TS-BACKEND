@@ -2,7 +2,9 @@ name: CTO-01 Security Checks
 
 on:
   pull_request:
-    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos, security/cto-04-private-list-audit, security/cto-03a-session-revocation, security/cto-05-typeorm-migrations, security/cto-03b-http-only-csrf]
+    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos, security/cto-04-private-list-audit, security/cto-03a-session-revocation, security/cto-05-typeorm-migrations, security/cto-03b-http-only-csrf, validation/p0-staging-smtp]
+  push:
+    branches: [security/p0-dependency-hardening]
   workflow_dispatch:
 
 permissions:
@@ -50,6 +52,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Reject production high/critical package vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
       - name: Authorization policy smoke tests
         run: npm run test:security
       - name: TypeScript typecheck
@@ -118,3 +122,51 @@ jobs:
           npm run build
           node scripts/test-typeorm-migrations.cjs
           node scripts/test-cookie-attributes.cjs
+
+  runtime-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_root
+          MYSQL_DATABASE: cto_security_test
+          MYSQL_USER: cto_test
+          MYSQL_PASSWORD: local_test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -plocal_test_root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build actual CapRover runtime image
+        run: docker build --pull -t cto-p0-runtime-ci:latest .
+      - name: Smoke-test compiled Node 24 runtime against disposable MySQL
+        run: |
+          docker run --rm -d --name cto-p0-runtime-check --network host \
+            -e NODE_ENV=test \
+            -e DB_SYNCHRONIZE=true \
+            -e DB_HOST=127.0.0.1 -e DB_PORT=3306 \
+            -e DB_USER=cto_test -e DB_PASSWORD=local_test_password \
+            -e DB_NAME=cto_security_test \
+            -e JWT_SECRET=ci_p0_runtime_only_random_string_123456789 \
+            -e PORT=5000 cto-p0-runtime-ci:latest
+          trap 'docker logs cto-p0-runtime-check || true; docker stop cto-p0-runtime-check || true' EXIT
+          docker exec cto-p0-runtime-check node --version | grep '^v24[.]'
+          for i in $(seq 1 60); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:5000/session || true)"
+            if [ "$code" = "401" ]; then
+              echo "Node 24 runtime API responded HTTP 401 as expected"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Runtime API did not become ready"
+          exit 1

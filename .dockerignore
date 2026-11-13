@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+build
+coverage
+*.log
+.env
+.env.*
+!.env.sample
+docs
+README*
+p0-*.json
