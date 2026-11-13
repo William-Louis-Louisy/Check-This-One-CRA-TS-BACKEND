@@ -2,7 +2,9 @@ name: CTO-01 Security Checks
 
 on:
   pull_request:
-    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos, security/cto-04-private-list-audit, security/cto-03a-session-revocation, security/cto-05-typeorm-migrations, security/cto-03b-http-only-csrf]
+    branches: [main, security/cto-01-jwt-rbac, security/cto-02-response-dtos, security/cto-04-private-list-audit, security/cto-03a-session-revocation, security/cto-05-typeorm-migrations, security/cto-03b-http-only-csrf, validation/p0-staging-smtp]
+  push:
+    branches: [security/p0-dependency-hardening]
   workflow_dispatch:
 
 permissions:
@@ -50,6 +52,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Reject production high/critical package vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
       - name: Authorization policy smoke tests
         run: npm run test:security
       - name: TypeScript typecheck

@@ -22,3 +22,11 @@ Do not merge, deploy or touch production/MySQL as part of this branch. Once CI a
 After the first semver-compatible audit pass, 15 production-tree advisories remained (1 critical, 7 high, 5 moderate, 2 low). The critical `tar` exposure comes from `bcrypt@5` via `@mapbox/node-pre-gyp`, which cannot be patched to a safe `tar@7` within its existing dependency ranges.
 
 The next reviewed changes upgrade `bcrypt` to v6 (eliminating the legacy pre-gyp/tar dependency), `jsonwebtoken` to v9 (enforcing HS256 explicitly), and SendGrid mail to v8.1.6 (bringing a newer Axios client). These are distinct major-version changes and require the entire policy, live MySQL, password-hashing/reset, SMTP-capture and browser regression suites before any staging deployment.
+
+## Audit and CI results — 13 November 2026
+
+- Original staging audit: 34 affected (5 critical, 17 high, 5 moderate, 7 low), before the dependency remediations.
+- New locked tree: **9 affected (0 critical, 0 high, 5 moderate, 4 low)** according to `npm audit --omit=dev --json` in GitHub Actions.
+- This is **not** a proof that all dependency vulnerabilities are gone or that the application is safe to release. Review remaining moderate/low findings, runtime reachability, and the frontend dependency tree separately.
+- The temporary branch-only workflow that could commit a new lockfile has been removed after the reproducible lockfile was generated. The existing security workflow now gates high/critical runtime advisories and runs the MySQL 8 integration and migration tests on this branch.
+- Rollout still requires a prebuilt Node 20 runtime image / build step. Do not use unverified CapRover `node/16` configuration with the new production `start` command.
