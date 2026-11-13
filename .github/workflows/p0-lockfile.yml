@@ -1,0 +1,62 @@
+name: P0 Rebuild Dependency Lockfile
+
+# Branch-only automation. Never touches production or base branches.
+on:
+  push:
+    branches:
+      - security/p0-dependency-hardening
+
+permissions:
+  contents: write
+
+concurrency:
+  group: p0-lockfile-update
+  cancel-in-progress: false
+
+jobs:
+  lockfile:
+    if: github.repository == 'William-Louis-Louisy/Check-This-One-CRA-TS-BACKEND'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout the P0 dependency branch only
+        uses: actions/checkout@v4
+        with:
+          ref: security/p0-dependency-hardening
+          persist-credentials: true
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Regenerate lockfile from reviewed package.json
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Confirm reproducible installation
+        run: npm ci --no-fund
+      - name: TypeScript build and authorization policies
+        run: |
+          npm run build
+          npm run test:security
+      - name: Commit only regenerated lockfile, if changed
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -- package-lock.json
+            git commit -m 'chore(deps): regenerate npm lockfile with verified Node 20'
+            git push origin HEAD:refs/heads/security/p0-dependency-hardening
+          fi
+      - name: Record production dependency audit
+        run: npm audit --omit=dev --json > p0-production-audit.json || true
+      - name: Print audit summary (without secrets)
+        run: |
+          node -e "const a=require('./p0-production-audit.json');console.log(JSON.stringify({metadata:a.metadata?.vulnerabilities,affected:Object.entries(a.vulnerabilities||{}).filter(([,v])=>v.severity==='critical'||v.severity==='high').map(([name,v])=>({name,severity:v.severity,via:v.via?.filter(x=>typeof x==='object').map(x=>x.title)}))},null,2))"
+      - name: Upload npm production audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-production-npm-audit
+          path: p0-production-audit.json
+          retention-days: 7
+      - name: Fail if critical vulnerabilities remain
+        run: |
+          node -e "const a=require('./p0-production-audit.json');if((a.metadata?.vulnerabilities?.critical||0)>0){console.error('Critical vulnerabilities remain: DO NOT MERGE');process.exit(1)}"
