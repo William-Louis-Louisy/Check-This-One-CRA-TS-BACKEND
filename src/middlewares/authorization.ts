@@ -32,7 +32,7 @@ const resolvePrincipal = async (
 
   let decoded: JwtPayload;
   try {
-    const payload = jwt.verify(token, secret);
+    const payload = jwt.verify(token, secret, { algorithms: ["HS256"] });
     if (typeof payload === "string" || typeof payload.id !== "number") {
       return undefined;
     }

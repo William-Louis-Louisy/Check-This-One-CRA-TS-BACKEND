@@ -16,3 +16,9 @@
 This new `start` expects compiled artifacts. The staging deployment must **build first** (`npm ci && npm run build`) before executing `npm start`. The current `captain-definition` references a legacy `node/16` template and has not been updated yet: do not deploy this branch with the old unverified template. A Node 20 deployment strategy with an explicit build stage must be tested before promoting.
 
 Do not merge, deploy or touch production/MySQL as part of this branch. Once CI and the production dependency audit are reviewed, repeat MySQL integration and browser tests on isolated staging.
+
+## Second review — remaining major-version debt
+
+After the first semver-compatible audit pass, 15 production-tree advisories remained (1 critical, 7 high, 5 moderate, 2 low). The critical `tar` exposure comes from `bcrypt@5` via `@mapbox/node-pre-gyp`, which cannot be patched to a safe `tar@7` within its existing dependency ranges.
+
+The next reviewed changes upgrade `bcrypt` to v6 (eliminating the legacy pre-gyp/tar dependency), `jsonwebtoken` to v9 (enforcing HS256 explicitly), and SendGrid mail to v8.1.6 (bringing a newer Axios client). These are distinct major-version changes and require the entire policy, live MySQL, password-hashing/reset, SMTP-capture and browser regression suites before any staging deployment.
