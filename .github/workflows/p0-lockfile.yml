@@ -31,6 +31,9 @@ jobs:
           cache: npm
       - name: Regenerate lockfile from reviewed package.json
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Apply nonbreaking npm audit resolutions to lockfile
+        # Do not use --force; leave breaking changes for explicit review.
+        run: npm audit fix --package-lock-only --ignore-scripts --no-fund || true
       - name: Confirm reproducible installation
         run: npm ci --no-fund
       - name: TypeScript build and authorization policies
