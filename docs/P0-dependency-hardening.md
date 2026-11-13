@@ -4,6 +4,7 @@
 
 ## First changes
 - Upgrade direct MySQL client from `mysql2@2.3.3` to `3.24.6` (major update requiring MySQL 8 integration tests).
+- Upgrade TypeORM from `0.3.11` to compatible `0.3.31` (declares `mysql2: ^2.2.5 || ^3.0.1`) and `reflect-metadata` to `^0.2.2`; do not bypass peer dependency checks.
 - Move development tooling `ts-node-dev` and `typescript` into `devDependencies`.
 - Keep `reflect-metadata` in production dependencies; TypeORM needs it at runtime.
 - Remove the redundant `crypto` NPM package: Node's built-in `crypto` is used directly.

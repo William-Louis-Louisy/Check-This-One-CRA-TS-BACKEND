@@ -30,8 +30,8 @@
     "node-cron": "^3.0.2",
     "nodemailer": "^10.5.0",
     "qrcode": "^1.5.1",
-    "typeorm": "^0.3.11",
-    "reflect-metadata": "^0.1.13"
+    "typeorm": "0.3.31",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
